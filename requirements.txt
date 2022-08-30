@@ -1,4 +1,0 @@
-ipython
-svgwrite
-numpy
-np2d
