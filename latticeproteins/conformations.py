@@ -4,13 +4,7 @@ import math, os
 import numpy as np
 from latticeproteins.interactions import miyazawa_jernigan
 import pickle
-
-# '_loop_in_C' is a Boolean switch specifying whether we try to speed
-# up the energy calculations by doing the looping with the C-extension
-# 'contactlooper'.  'True' means we try to do this.
-_loop_in_C = True
-if _loop_in_C:
-    from latticeproteins.contactlooper import ContactLooper
+from latticeproteins.contactlooper import ContactLooper
 
 PROTOCOL = pickle.HIGHEST_PROTOCOL
 assert PROTOCOL >= 2
@@ -111,21 +105,22 @@ class Conformations(object):
     ----------
     _numconformations : dict
         A dictionary mapping the number of contact sets to the number of conformations
-        with that contact set.
+        with that contact set. There are 'self._numconformations[i]' conformations
+        with 'i' contacts.
     _contactsets : list of lists
-        'self._contactsets' is a list of contact sets.  'self._contactsets[i]'
+        A list of contact sets.  'self._contactsets[i]'
         is the contact set for contact i.  It is a list of numbers.
         'x = self._contactsets[i]' describes the residues in contact
         in contact 'i'.  If this contact is between residues 'ires'
         and 'jres', then 'x = self._length * ires + jres' where
         0 <= ires, jres < 'self._length', and ires < jres + 1 contact sets
     _contactsetdegeneracy : list
-        'self._contactsetdegeneracy' is a list of integers giving the
+        A list of integers giving the
         degeneracy of the contact sets (the number of different conformations
         with this contact set).  'self_contactsetdegeneracy[i]' is the
         degeneracy of the contact set 'self._contactsets[i]'
     _contactsetconformation : list
-        'self._contactsetconformation' is a list of the conformations
+        A list of the conformations
         associated with each contact set.  If contact set 'self._contactsets[i]'
         is degenerate ('self._contactsetdegeneracy[i]' > 1), the value
         'self._contactsetconformation[i]' is 'None'.  Otherwise, it
@@ -137,15 +132,20 @@ class Conformations(object):
         We require the first bond to be Up, and the first
         non-Up bond to be Right.
     _numcontactsets : dict
-        'self._numcontactsets[i]' holds the number of different contact
+        Holds the number of different contact
         sets with 'i' contacts.
+    _foldedsequences : dict
+        Holds recently folded sequences.
+        The keys are the arguments to 'FoldSequence', and the items
+        are how many times the saved sequence was accessed and the
+        information about the folded sequence.  Sequences in the keys
+        are strings.
     """
 
     def __init__(self, length, database_dir="database/", interaction_energies=miyazawa_jernigan):
         self._interaction_energies = interaction_energies
         if not os.path.isdir(database_dir):
             os.makedirs(database_dir)
-            # raise IOError("Cannot find database directory of %s." % database_dir)
         object_properties = ['_length', '_numconformations', '_contactsets', '_contactsetdegeneracy',
                              '_contactsetconformation', '_numcontactsets']
         foundone = didntfindone = False
@@ -162,17 +162,13 @@ class Conformations(object):
         if foundone and not didntfindone:
             # return existing values
             self._length = pickle.load(open("%s/%d_length.pickle" % (database_dir, length), 'rb'))
-            if self._length != length:
-                raise ValueError("Length mismatch.")
+            assert self._length == length
             self._numconformations = pickle.load(open("%s/%d_numconformations.pickle" % (database_dir, length), 'rb'))
             self._contactsets = pickle.load(open("%s/%d_contactsets.pickle" % (database_dir, length), 'rb'))
-            self._contactsetdegeneracy = pickle.load(
-                open("%s/%d_contactsetdegeneracy.pickle" % (database_dir, length), 'rb'))
-            self._contactsetconformation = pickle.load(
-                open("%s/%d_contactsetconformation.pickle" % (database_dir, length), 'rb'))
+            self._contactsetdegeneracy = pickle.load(open("%s/%d_contactsetdegeneracy.pickle" % (database_dir, length), 'rb'))
+            self._contactsetconformation = pickle.load(open("%s/%d_contactsetconformation.pickle" % (database_dir, length), 'rb'))
             self._numcontactsets = pickle.load(open("%s/%d_numcontactsets.pickle" % (database_dir, length), 'rb'))
-            # sort the contact set information so that the conformations
-            # with the most contacts come first
+            # sort the contact set information so that the conformations with the most contacts come first
             n = len(self._contactsets)
             decorated_list = [(len(self._contactsets[i]), self._contactsets[i], self._contactsetdegeneracy[i],
                                self._contactsetconformation[i]) for i in range(n)]
@@ -185,44 +181,14 @@ class Conformations(object):
             return
         elif foundone and didntfindone:
             raise ValueError("Found some but not all conformations for length %d in %s." % (length, database_dir))
-        # If we have made it here, we are generating new information for this conformation
-        # A listing of all class variables
-        # 'self._length' is the length of the protein (self-avoiding walk)
+
+        # If information for this Conformations is not saved, then generate it from scratch.
         self._length = length
-        # there are 'self._numconformations[i]' conformations with 'i' contacts
         self._numconformations = {}
-        # 'self._contactsets' is a list of contact sets.  'self._contactsets[i]'
-        # is the contact set for contact i.  It is a list of numbers.
-        # 'x = self._contactsets[i]' describes the residues in contact
-        # in contact 'i'.  If this contact is between residues 'ires'
-        # and 'jres', then 'x = self._length * ires + jres' where
-        # 0 <= ires, jres < 'self._length', and ires < jres + 1
         self._contactsets = []
-        # 'self._contactsetdegeneracy' is a list of integers giving the
-        # degeneracy of the contact sets (the number of different conformations
-        # with this contact set).  'self_contactsetdegeneracy[i]' is the
-        # degeneracy of the contact set 'self._contactsets[i]'
         self._contactsetdegeneracy = []
-        # 'self._contactsetconformation' is a list of the conformations
-        # associated with each contact set.  If contact set 'self._contactsets[i]'
-        # is degenerate ('self._contactsetdegeneracy[i]' > 1), the value
-        # 'self._contactsetconformation[i]' is 'None'.  Otherwise, it
-        # is the string representing the conformation that gives rise
-        # to contact set 'self._contactsets[i]'.  The conformations are given
-        # such that 'self._contactsetconformation[i][j]'
-        # gives the conformation of bond 'j' (0 <= j < 'self._length' - 1)
-        # as 'U' (Up), 'R' (Right), 'D' (Down), or 'L' (Left).
-        # We require the first bond to be Up, and the first
-        # non-Up bond to be Right.
         self._contactsetconformation = []
-        # 'self._numcontactsets[i]' holds the number of different contact
-        # sets with 'i' contacts.
         self._numcontactsets = {}
-        # 'self._foldedsequences = {}' holds recently folded sequences.
-        # The keys are the arguments to 'FoldSequence', and the items
-        # are how many times the saved sequence was accessed and the
-        # information about the folded sequence.  Sequences in the keys
-        # are strings.
         self._foldedsequences = {}
 
         # Now do some error checking on input variables
@@ -250,11 +216,9 @@ class Conformations(object):
         dx = {'U': 0, 'R': 1, 'D': 0, 'L': -1}
         dy = {'U': 1, 'R': 0, 'D': -1, 'L': 0}
         next = {'U': 'R', 'R': 'D', 'D': 'L', 'L': 'U'}
-        opposite = {'U': 'D', 'D': 'U', 'R': 'L', 'L': 'R'}
         n = self._length - 2  # index of last bond in 'conformation'
-        conformation = ['U' for i in range(n + 1)]
+        conformation = 'U' * (n+1)
         first_R = n  # index of the first 'R' in the conformation
-        ncount = 0
         while True:  # keep finding new conformations
             # See if the current conformation has overlap
             # If no overlap, store the contact set
@@ -264,8 +228,7 @@ class Conformations(object):
             for c in conformation:
                 x += dx[c]
                 y += dy[c]
-                coord = (x, y)
-                if coord in res_positions:  # overlap
+                if (x, y) in res_positions:  # overlap
                     # increment at the step that gave the problem
                     for k in range(j + 1, n + 1):
                         conformation[k] = 'U'
@@ -280,14 +243,13 @@ class Conformations(object):
                             conformation[k] = 'U'
                     break
                 j += 1
-                res_positions[coord] = j
-                res_coords.append(coord)
+                res_positions[(x, y)] = j
+                res_coords.append((x, y))
             else:  # loop finishes normally, this is a valid conformation
                 # generate the contact set
                 cs = []
                 numcontacts = 0
-                for j in range(len(res_coords)):
-                    (x, y) = res_coords[j]
+                for j, (x, y) in enumerate(res_coords):
                     partners_list = []
                     for c in ['U', 'R', 'D', 'L']:
                         try:
@@ -333,7 +295,7 @@ class Conformations(object):
             # see if we are done
             if first_R == 0:
                 break
-        #
+
         # Now use 'contactsets' to generate 'self._contactsets',
         # 'self._contactsetdegeneracy', and 'self._contactsetconformation'
         for (cs, n_or_conf) in contactsets.items():
@@ -346,9 +308,9 @@ class Conformations(object):
             else:
                 self._contactsetdegeneracy.append(n_or_conf)
                 self._contactsetconformation.append(None)
-        #
+
         del contactsets
-        #
+
         # to make the energy evaluations quicker, sort so that
         # contact sets with more conformations are first:
         decorated_list = [(len(self._contactsets[i]), self._contactsets[i], self._contactsetdegeneracy[i],
@@ -359,7 +321,7 @@ class Conformations(object):
         self._contactsets = [decorated_list[i][1] for i in range(len(decorated_list))]
         self._contactsetdegeneracy = [decorated_list[i][2] for i in range(len(decorated_list))]
         self._contactsetconformation = [decorated_list[i][3] for i in range(len(decorated_list))]
-        #
+
         # store the conformations data in the database
         pickle.dump(self._length, open("%s/%d_length.pickle" % (database_dir, length), 'wb'), protocol=PROTOCOL)
         pickle.dump(self._numconformations, open("%s/%d_numconformations.pickle" % (database_dir, length), 'wb'),
@@ -378,8 +340,7 @@ class Conformations(object):
         return self._length
 
     def k_lowest_confs(self, seq, temp, k):
-        """Get the `k` lowest conformations in the sequence's conformational ensemble.
-        """
+        """Get the `k` lowest conformations in the sequence's conformational ensemble."""
         length = len(seq)
         # Calculate the kth lowest conformations
         ncontacts = self.max_contacts()
@@ -431,7 +392,7 @@ class Conformations(object):
 
         # create 'res_interactions'.  'res_interactions[j]' holds the energy
         # for the interaction 'j' as specified in 'self._contactsets[i][j]'
-        res_interactions = [0.0 for i in range(self._length ** 2)]
+        res_interactions = [0.0] * (self._length ** 2)
         for ires in range(self._length):
             itimeslength = ires * self._length
             for jres in range(ires + 1, self._length):
@@ -440,13 +401,10 @@ class Conformations(object):
 
         # Use C function to loop through contacts
         (minE, ibest, partitionsum, folds) = ContactLooper(res_interactions, self._contactsets,
-                                                           self._contactsetdegeneracy, float(temp))
+                                                           self._contactsetdegeneracy, temp)
 
         # Set folds to boolean
-        if folds == 1:
-            folds = True
-        else:
-            folds = False
+        folds = (folds == 1)
 
         # Get the native conformation
         conf = self._contactsetconformation[ibest]
@@ -487,11 +445,7 @@ class Conformations(object):
         n : int
             is returned as the number of contacts for the conformation
             with the most contacts."""
-        n = 0
-        for cs in self._contactsets:
-            if len(cs) > n:
-                n = len(cs)
-        return n
+        return max(len(cs) for cs in self._contactsets)
 
     def num_conformations(self, contacts=None):
         """Returns the number of conformations.
