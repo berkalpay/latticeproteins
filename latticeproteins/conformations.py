@@ -217,7 +217,7 @@ class Conformations(object):
         dy = {'U': 1, 'R': 0, 'D': -1, 'L': 0}
         next = {'U': 'R', 'R': 'D', 'D': 'L', 'L': 'U'}
         n = self._length - 2  # index of last bond in 'conformation'
-        conformation = 'U' * (n+1)
+        conformation = ['U'] * (n+1)
         first_R = n  # index of the first 'R' in the conformation
         while True:  # keep finding new conformations
             # See if the current conformation has overlap
