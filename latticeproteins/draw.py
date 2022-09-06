@@ -1,29 +1,18 @@
 __doc__ = """
 Module for creating SVG's of protein lattice configurations.
 
-Originally written by Jesse Bloom, 2004.
-
-Updated by Zach Sailer, 2017.
-
 Example call:
-
     >>> # Create an instance
     >>> drawing = latticegpm.svg.Configuration(sequence, configuration, filename="drawing1.svg")
     >>> # Save to file
     >>> # drawing.save()
     >>> # Print in Jupyter (IPython) notebook
     >>> drawing.notebook
-
 """
 
-import svgwrite
 import numpy as np
-from functools import wraps
-try:
-    from IPython.display import SVG
-except ImportError:
-    raise ImportError("This module requires a IPython's display module to create "
-                    "an SVG drawing. Please install IPython before using this module.")
+import svgwrite
+from IPython.display import SVG
 
 ROTATE = {"U":"R", "R":"D", "D":"L", "L":"U"}
 
@@ -48,8 +37,7 @@ def to_file(sequence, conf, filename, **kwargs):
     drawing.save(filename)
 
 def configuration_to_array(sequence, configuration):
-    """Create a square numpy array with the configuration laid out.
-    """
+    """Create a square numpy array with the configuration laid out."""
     moves = {"U":[0,-1], "D":[0,1], "R":[1,0], "L":[-1,0]}
     # find boundaries for drawing
     xmoves, ymoves = [0], [0]
@@ -115,7 +103,7 @@ class Configuration(SVG):
         Amino acid sequence
     configuration : str
         sequence of direction letters describing the 2d configuration.
-    colors : list of strings
+    color_sequence : list of strings
         list of colors for each amino acid in sequence
     rotation : int
         rotate the configuration by 0, 90, 180, or 270 degrees
@@ -133,51 +121,36 @@ class Configuration(SVG):
     >>> drawing.notebook
     """
     def __init__(self, sequence, configuration,
-        color_sequence=None,
-        rotation=0,
-        font_size=20,
-        dot_scale=1.0,
-        font_weight="normal"
-        ):
-        # Rotate configuration if given
-        # Set sequence and configuration
+        color_sequence=None, rotation=0, font_size=20, dot_scale=1.0, font_weight="normal"):
         self.sequence = sequence
+        self.configuration = configuration  # TODO: change this to conformation
         self.rotation = 0
         self.font_size = font_size
         self.dot_scale = dot_scale
         self.font_weight = font_weight
-        # Set configuration
-        self.configuration = configuration
+
         # set color
         if color_sequence is None:
             self.color_sequence = "k"*len(self.sequence)
-        elif len(color_sequence) != len(self.sequence):
-            raise Exception("color_sequence must have the same length as sequence.")
         else:
+            assert len(color_sequence) == len(self.sequence)
             self.color_sequence = color_sequence
-        # Sets rotation and configuration
+
         self.rotate(rotation)
 
     @property
     def data(self):
-        """Return svg as a string."""
+        """Return SVG as a string."""
         return self.drawing.tostring()
 
     @property
     def notebook(self):
-        """ Display SVG in Jupyther notebook. """
-        try:
-            # Import IPython display for notebook
-            from IPython.display import SVG as ipython_display
-            # Display in notebook
-            return ipython_display(self.string)
-        except ImportError:
-            raise Warning(""" IPython not installed. """)
+        """ Display SVG in Jupyter notebook."""
+        from IPython.display import SVG as ipython_display # TODO: move this
+        return ipython_display(self.string)
 
     def rotate(self, rotation):
-        """Rotate the drawing by 90, 180, or 270.
-        """
-        # Rotate svg if desired.
+        """Rotate the drawing by 90, 180, or 270 degrees."""
         n = int(rotation/90)
         self.rotation += n
         for i in range(n):
@@ -185,12 +158,11 @@ class Configuration(SVG):
         self._build_drawing()
 
     def save(self, filename):
-        """ save svg """
+        """Save SVG."""
         self.drawing.saveas(filename)
 
     def _add_item(self, x, y):
-        """Adds item at position (x,y) in array.
-        """
+        """Adds item at position (x,y) in array."""
         # Try if it's a bond
         try:
             if self.mapping[self.array[x,y]] is not None:
@@ -204,9 +176,9 @@ class Configuration(SVG):
             # Add color to specific letters if given
             color = COLORS[self.color_array[x,y]]
             self.drawing.letter(2*self.offset+self.font_size*y,
-                2*self.offset+self.font_size*x,
-                self.array[x,y],
-                color=color)
+                                2*self.offset+self.font_size*x,
+                                self.array[x,y],
+                                color=color)
 
     def _build_drawing(self):
         """Build drawing object."""
@@ -216,30 +188,24 @@ class Configuration(SVG):
         self.shape = self.array.shape
         self.height = self.font_size * self.shape[0]
         self.width = self.font_size * self.shape[1]
-        self.drawing = Drawing(
-            font_size=self.font_size,
-            size=(self.width, self.height),
-            dot_scale=self.dot_scale
-        )
+        self.drawing = Drawing(font_size=self.font_size, size=(self.width, self.height), dot_scale=self.dot_scale)
         self.offset = 0.25 * self.font_size
         
         # Object for how to draw a configuration
-        self.mapping = {"d":self.drawing.down,
-            "u":self.drawing.up,
-            "r":self.drawing.right,
-            "l":self.drawing.left,
-            ".":self.drawing.dot,
-            " ":None
-        }
-        # Draw grid in svg
+        self.mapping = {"d": self.drawing.down,
+                        "u": self.drawing.up,
+                        "r": self.drawing.right,
+                        "l": self.drawing.left,
+                        ".": self.drawing.dot,
+                        " ": None}
+        # Draw grid in SVG
         for x in range(self.shape[0]):
             for y in range(self.shape[1]):
                 self._add_item(x,y)
 
 class Drawing(svgwrite.Drawing):
-    """Wrap svgwrite.Drawing object with extra methods that make drawing lattice
-    proteins much easier
-    """
+    """Wrap svgwrite.Drawing object with extra methods that make drawing lattice proteins much easier."""
+
     def __init__(self, font_size=20, dot_scale=1.0, font_weight="normal", **kwargs):
         self.font_size = font_size
         self.stepsize = 0.25*font_size
@@ -249,40 +215,39 @@ class Drawing(svgwrite.Drawing):
         super(Drawing, self).__init__(**kwargs)
 
     def bond(self, start, end):
-        """ Create an svg line object to add to a svgwrite drawing object.
-        """
+        """Create an SVG line object to add to a svgwrite drawing object."""
         line = self.line(start, end, stroke=svgwrite.rgb(10,10,16, '%'), style="stroke-width:" + str(self.linewidth))
         self.add(line)
 
     def right(self, x, y):
-        """ Add a right facing line to figure. """
+        """ Add a right facing line to figure."""
         start = (x-self.stepsize,y)
         end = (x+self.stepsize,y)
         self.bond(start,end)
 
     def left(self, x, y):
-        """ Add a right facing line to figure. """
+        """ Add a right facing line to figure."""
         start = (x+self.stepsize,y)
         end = (x-self.stepsize,y)
         self.bond(start,end)
 
     def up(self, x, y):
-        """ Add a right facing line to figure. """
-        start = (x,y-self.stepsize)
-        end = (x,y+self.stepsize)
+        """Add a right facing line to figure."""
+        start = (x, y-self.stepsize)
+        end = (x, y+self.stepsize)
         self.bond(start, end)
 
     def down(self, x, y):
-        """ Add a right facing line to figure. """
-        start = (x,y+self.stepsize)
-        end = (x,y-self.stepsize)
-        self.bond(start,end)
+        """Add a right facing line to figure."""
+        start = (x, y+self.stepsize)
+        end = (x, y-self.stepsize)
+        self.bond(start, end)
 
     def letter(self, x, y, char, color="black"):
-        """ Add letter to grid where residues exist. """
+        """Add letter to grid where residues exist."""
         xoffset = -self.stepsize-0.1*self.stepsize
         yoffset = self.stepsize
-        letter = self.text(char, insert=(x + xoffset,y + yoffset),
+        letter = self.text(char, insert=(x + xoffset, y + yoffset),
             style="font-size:"+str(self.font_size)+
             "px;font-family:Courier;"
             "font-weight:" + self.font_weight + ";"
@@ -290,10 +255,9 @@ class Drawing(svgwrite.Drawing):
         return self.add(letter)
 
     def dot(self, x, y):
-        """ Add a dot on grid where no letter exists"""
+        """Add a dot on grid where no letter exists."""
         xoffset = (-self.stepsize-0.15*self.stepsize)*self.dot_scale
         yoffset = (self.stepsize/2)
         letter = self.text('.', insert=(x + xoffset, y + yoffset),
-            style="font-size:"+str(self.font_size * self.dot_scale)+
-            "px;font-family:Courier")
+                           style="font-size:"+str(self.font_size * self.dot_scale)+"px;font-family:Courier")
         return self.add(letter)
