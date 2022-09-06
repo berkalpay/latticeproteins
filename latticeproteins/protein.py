@@ -1,8 +1,5 @@
 import numpy as np
-import pandas as pd
-
-from .conformations import Conformations
-from .thermodynamics import LatticeThermodynamics, LatticeGroupThermodynamics
+from conformations import Conformations
 
 class LatticeProtein(object):
     """A single lattice protein.
