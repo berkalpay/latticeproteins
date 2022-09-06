@@ -1,24 +1,13 @@
-#!/usr/bin/python
-# Begin fitness.py
-#---------------------------------------------------------------------
-"""Module for calculating thermodynamics of lattice protein sequences.
+"""Module for calculating thermodynamics of lattice protein sequences."""
 
-Originally written by Jesse Bloom, 2004.
-
-Updated by Zach Sailer, 2017."""
-#----------------------------------------------------------------------
 import os
-import math, sys
 import numpy as np
 
 from . import conformations as c
 from .interactions import miyazawa_jernigan
 from .conformations import fold_energy
-#----------------------------------------------------------------------
-class ThermodynamicsError(Exception):
-    """Error computing lattice protein thermodynamics."""
 
-#----------------------------------------------------------------------
+
 class LatticeThermodynamics(object):
     """A single lattice protein.
 
@@ -35,27 +24,25 @@ class LatticeThermodynamics(object):
     """
     #------------------------------------------------------------------
     def __init__(self, conformations, temp=1.0):
-        # Assign class instance variables and error check
-        if not (isinstance(temp, (int, float)) and temp > 0):
-            raise ThermodynamicsError("Invalid 'temp' of %r." % temp)
-
-        # Check Conformations.
-        if not isinstance(conformations, c.Conformations) and not isinstance(conformations, c.ConformationList):
-            raise TypeError("conformations must be a Conformations or ConformationList object.")
+        assert isinstance(temp, (int, float)) and temp > 0
+        assert isinstance(conformations, c.Conformations) or isinstance(conformations, c.ConformationList)
 
         self.temp = temp
         self.conformations = conformations
 
     @classmethod
     def from_length(cls, length, temp, database_dir="database/", interactions=miyazawa_jernigan):
-        """Create a thermodynamic object for sequences of a given length.
-        """
+        """Create a thermodynamic object for sequences of a given length."""
         if not os.path.exists(database_dir):
             print("Creating a conformations database in %s" % database_dir)
             os.makedirs(database_dir)
         confs = c.Conformations(length, database_dir=database_dir, interaction_energies=interactions)
         self = cls(temp, confs)
         return self
+
+    def length(self):
+        """Returns the sequence length for which fitnesses are computed."""
+        return self.conformations.length()
 
     def native_conf(self, seq):
         """Return the native conformation."""
@@ -102,10 +89,9 @@ class LatticeThermodynamics(object):
         folds : boolean
             True if a single native structure exists. False is not.
         """
-        if len(seq) != self.length():
-            raise ThermodynamicsError("Invalid 'seq' of %r." % seq)
+        assert len(seq) == self.length()
         return self.conformations.fold_sequence(seq, self.temp)
-    #---------------------------------------------------------------------
+
     def stability(self, seq, target=None):
         """Computes the stability of a sequence if it is below cutoff.
 
@@ -158,7 +144,7 @@ class LatticeThermodynamics(object):
             return (dGf, conf, partitionsum, folds)
         else:
             return (0, conf, partitionsum, folds)
-    #---------------------------------------------------------------------
+
     def fracfolded(self, seq, target=None):
         """Compute the fraction folded of the sequence.
 
@@ -212,7 +198,7 @@ class LatticeThermodynamics(object):
             f = 1.0 / (1.0 + np.exp(dG / self.temp))
             return (f, conf, partitionsum, folds)
 
-    #---------------------------------------------------------------------
+
     def all_metrics(self, seq):
         """Compute lattice NativeE, Stability, and Fitness of a given sequence.
 
@@ -264,11 +250,6 @@ class LatticeThermodynamics(object):
         out = (nativeE_results[0], stability_results[0],
                 fracfolded_results[0]) + tuple(nativeE_results[1:])
         return out
-    #---------------------------------------------------------------------
-    def length(self):
-        """Returns the sequence length for which fitnesses are computed."""
-        return self.conformations.length()
-
 
 class LatticeGroupThermodynamics(object):
     """A group of lattice proteins. Useful for fast calculation of a bunch of
@@ -307,8 +288,7 @@ class LatticeGroupThermodynamics(object):
     """
     def __init__(self, seqlist, temp, conformations, target=None):
         # Assign class instance variables and error check
-        if not (isinstance(temp, (int, float)) and temp > 0):
-            raise ThermodynamicsError("Invalid 'temp' of %r." % temp)
+        assert isinstance(temp, (int, float)) and temp > 0
         self.temp = temp
 
         # Set conformations after checking
@@ -318,8 +298,7 @@ class LatticeGroupThermodynamics(object):
         self.length = self.conformations.length
 
         # Check length of target
-        if len(target)-1 != self.length:
-            raise ThermodynamicsError("Length of target must be length-1")
+        assert len(target)-1 == self.length
         self._target = target
 
         self.seqlist = seqlist
@@ -329,8 +308,7 @@ class LatticeGroupThermodynamics(object):
 
         for i, seq in enumerate(self.seqlist):
             # Check that sequence is valid
-            if len(seq) != self.length:
-                raise ThermodynamicsError("Length of sequence, %s, does not equal conformation lengths" % seq)
+            assert len(seq) == self.length
 
             # Fold sequence and set energy
             out = self.conformations.fold_sequence(seq, self.temp)
