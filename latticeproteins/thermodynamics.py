@@ -22,7 +22,7 @@ class LatticeThermodynamics(object):
         specifies the length of the protein sequences that can be
         folded.
     """
-    #------------------------------------------------------------------
+
     def __init__(self, conformations, temp=1.0):
         assert isinstance(temp, (int, float)) and temp > 0
         assert isinstance(conformations, c.Conformations) or isinstance(conformations, c.ConformationList)
@@ -30,43 +30,9 @@ class LatticeThermodynamics(object):
         self.temp = temp
         self.conformations = conformations
 
-    @classmethod
-    def from_length(cls, length, temp, database_dir="database/", interactions=miyazawa_jernigan):
-        """Create a thermodynamic object for sequences of a given length."""
-        if not os.path.exists(database_dir):
-            print("Creating a conformations database in %s" % database_dir)
-            os.makedirs(database_dir)
-        confs = c.Conformations(length, database_dir=database_dir, interaction_energies=interactions)
-        self = cls(temp, confs)
-        return self
-
     def length(self):
         """Returns the sequence length for which fitnesses are computed."""
         return self.conformations.length()
-
-    def native_conf(self, seq):
-        """Return the native conformation."""
-        (minE, conf, partitionsum, folds) = self._nativeE(seq)
-        return conf
-
-    def nativeE(self, seq, target=None):
-        """Compute the native energy and return it.
-
-        Parameters
-        ----------
-        seq : str or list
-            sequence to fold.
-
-        Returns
-        -------
-        minE : float
-            Energy of the native state.
-        """
-        if target is None:
-            (minE, conf, partitionsum, folds) = self._nativeE(seq)
-        else:
-            minE = fold_energy(seq, target, self.conformations._interaction_energies)
-        return minE
 
     def _nativeE(self, seq):
         """Compute the lattice native energy and partition sum of a sequence.
@@ -159,7 +125,7 @@ class LatticeThermodynamics(object):
             fractioned folded.
         """
         nativeE_results = self._nativeE(seq)
-        if target != None:
+        if target is not None:
             minE = fold_energy(seq, target, self.conformations._interaction_energies)
             nativeE_results = list(nativeE_results)
             nativeE_results[0] = minE
