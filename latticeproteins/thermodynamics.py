@@ -163,59 +163,7 @@ class LatticeThermodynamics(object):
         else:
             f = 1.0 / (1.0 + np.exp(dG / self.temp))
             return (f, conf, partitionsum, folds)
-
-
-    def all_metrics(self, seq):
-        """Compute lattice NativeE, Stability, and Fitness of a given sequence.
-
-        Parameters
-        ----------
-        seq : str
-            protein sequence string.
-
-        Returns
-        -------
-        nativeE : float
-            energy of the native state.
-        dG : float
-            stability of the native state.
-        fitness : float
-            fitness of the native state.
-        """
-        metrics = self._all_metrics(seq)
-        return metrics[0], metrics[1], metrics[2]
-
-    def _all_metrics(self, seq):
-        """Compute lattice NativeE, Stability, and Fitness of a given sequence.
-
-        Parameters
-        ----------
-        seq : str
-            protein sequence string.
-
-        Returns
-        -------
-        minE : float
-            energy of native conformation
-        stability : float
-            stability of native energy
-        fracfolded : float
-            fraction folded.
-        conf : str
-            Native conformation
-        partitionsum : float
-            Partition function sum
-        numcontacts : int
-            Number of contacts in native state
-        folds : boolean
-            True if a single native structure exists. False is not.
-        """
-        nativeE_results = self._nativeE(seq)
-        stability_results = self._stability(*nativeE_results)
-        fracfolded_results = self._fracfolded(*stability_results)
-        out = (nativeE_results[0], stability_results[0],
-                fracfolded_results[0]) + tuple(nativeE_results[1:])
-        return out
+        
 
 class LatticeGroupThermodynamics(object):
     """A group of lattice proteins. Useful for fast calculation of a bunch of
