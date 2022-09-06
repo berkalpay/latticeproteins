@@ -36,14 +36,14 @@ def to_file(sequence, conf, filename, **kwargs):
     drawing = Configuration(sequence, conf, **kwargs)
     drawing.save(filename)
 
-def configuration_to_array(sequence, configuration):
+def conformation_to_array(sequence, conformation):
     """Create a square numpy array with the configuration laid out."""
     moves = {"U":[0,-1], "D":[0,1], "R":[1,0], "L":[-1,0]}
     # find boundaries for drawing
     xmoves, ymoves = [0], [0]
     # Figure out the perimeter of the configuration
-    for i in range(len(configuration)):
-        move = configuration[i]
+    for i in range(len(conformation)):
+        move = conformation[i]
         xmoves.append(xmoves[i] + moves[move][0])
         ymoves.append(ymoves[i] + moves[move][1])
     # bounds of configuration
@@ -75,11 +75,11 @@ def configuration_to_array(sequence, configuration):
     xpos = grid_xorg
     ypos = grid_yorg
     grid[ypos][xpos] = sequence[0]
-    for i in range(len(configuration)):
+    for i in range(len(conformation)):
         let = sequence[i+1]
-        bond = configuration[i].lower()
+        bond = conformation[i].lower()
         # Get direction
-        step = moves[configuration[i]]
+        step = moves[conformation[i]]
         # Define change in x and y for both edges and letter
         dx = step[0]
         dy = step[1]
@@ -114,16 +114,16 @@ class Configuration(SVG):
     Examples
     --------
     >>> # Create an instance
-    >>> drawing = Configuration(sequence, configuration)
+    >>> drawing = Configuration(sequence, conformation)
     >>> # Save to file
     >>> # drawing.save()
     >>> # Print in Jupyter (IPython) notebook
     >>> drawing.notebook
     """
-    def __init__(self, sequence, configuration,
-        color_sequence=None, rotation=0, font_size=20, dot_scale=1.0, font_weight="normal"):
+    def __init__(self, sequence, conformation,
+                 color_sequence=None, rotation=0, font_size=20, dot_scale=1.0, font_weight="normal"):
         self.sequence = sequence
-        self.configuration = configuration  # TODO: change this to conformation
+        self.conformation = conformation  # TODO: change this to conformation
         self.rotation = 0
         self.font_size = font_size
         self.dot_scale = dot_scale
@@ -145,16 +145,15 @@ class Configuration(SVG):
 
     @property
     def notebook(self):
-        """ Display SVG in Jupyter notebook."""
-        from IPython.display import SVG as ipython_display # TODO: move this
-        return ipython_display(self.string)
+        """Display SVG in Jupyter notebook."""
+        return SVG(self.string)
 
     def rotate(self, rotation):
         """Rotate the drawing by 90, 180, or 270 degrees."""
         n = int(rotation/90)
         self.rotation += n
         for i in range(n):
-            self.configuration = "".join([ROTATE[c] for c in self.configuration])
+            self.conformation = "".join([ROTATE[c] for c in self.conformation])
         self._build_drawing()
 
     def save(self, filename):
@@ -182,8 +181,8 @@ class Configuration(SVG):
 
     def _build_drawing(self):
         """Build drawing object."""
-        self.array = np.array(configuration_to_array(self.sequence, self.configuration))
-        self.color_array = np.array(configuration_to_array(self.color_sequence, self.configuration))
+        self.array = np.array(configuration_to_array(self.sequence, self.conformation))
+        self.color_array = np.array(configuration_to_array(self.color_sequence, self.conformation))
         # Build SVG grid object
         self.shape = self.array.shape
         self.height = self.font_size * self.shape[0]
