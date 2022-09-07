@@ -1,31 +1,18 @@
-#!/usr/bin/python
-# Begin sequences.py
-#---------------------------------------------------------------------------
-"""
-Originally written by Jesse Bloom, 2004.
+import random
 
-Updated by Zach Sailer, 2017."""
-#---------------------------------------------------------------------------
-import random, shelve, os
-#---------------------------------------------------------------------------
-class SequenceError(Exception):
-    """Error with a lattice protein sequence."""
-    pass
-#---------------------------------------------------------------------------
-# codes for all residues
-_residues = ['A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P',
-'Q', 'R', 'S', 'T', 'V', 'W', 'Y']
+_residues = ['A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y']
 assert len(_residues) == 20
+
 
 def hamming_distance(seq1, seq2):
     """Returns the Hamming distance between two sequences."""
-    if len(seq1) != len(seq2):
-        raise SequenceError("Sequences differ in length.")
+    assert len(seq1) == len(seq2)
     d = 0
     for i in range(len(seq1)):
         if seq1[i] != seq2[i]:
             d += 1
     return d
+
 
 def find_differences(s1, s2):
     """Return the index of differences between two sequences."""
@@ -35,12 +22,13 @@ def find_differences(s1, s2):
             indices.append(i)
     return indices
 
+
 def random_sequence(length):
     """Returns a random sequence of the specified length."""
-    if not (isinstance(length, int) and length > 0):
-        raise SequenceError("Invalid sequence length of %r." % length)
+    assert isinstance(length, int) and length > 0
     s = [random.choice(_residues) for i in range(length)]
     return s
+
 
 def mutate_sequence(seq, mutrate):
     """Mutates a protein sequence.
@@ -73,6 +61,7 @@ def mutate_sequence(seq, mutrate):
     else:
         return seq
 
+
 def n_mutants(seq, nmutations, nsequences):
     """Returns sequences with a specified number of mutations.
 
@@ -95,8 +84,7 @@ def n_mutants(seq, nmutations, nsequences):
     seqlist : list
         List of mutant sequences n mutations away.
     """
-    if not (0 < nmutations <= len(seq)):
-        raise SequenceError("Invalid 'nmutations' of %r." % nmutations)
+    assert 0 < nmutations <= len(seq)
     seqlist = []
     if nsequences == 'ALL':
         if nmutations == 1:
@@ -106,7 +94,8 @@ def n_mutants(seq, nmutations, nsequences):
                         newseq = list(seq)
                         newseq[ires] = mutres
                         seqlist.append(newseq)
-        elif nmutations == 2:
+        else:
+            assert nmutations == 2
             for ires in range(len(seq)):
                 for imutres in _residues:
                     if imutres != seq[ires]:
@@ -117,9 +106,8 @@ def n_mutants(seq, nmutations, nsequences):
                                     newseq[ires] = imutres
                                     newseq[jres] = jmutres
                                     seqlist.append(newseq)
-        else:
-            raise SequenceError("'nsequences' cannot be 'ALL' when 'nmutations' is %r." % nmutations)
-    elif isinstance(nsequences, int) and nsequences > 0:
+    else:
+        assert isinstance(nsequences, int) and nsequences > 0
         for imutant in range(nsequences):
             newseq = list(seq)
             for imut in range(nmutations):
@@ -131,6 +119,4 @@ def n_mutants(seq, nmutations, nsequences):
                     mutres = random.choice(_residues)
                 newseq[ires] = mutres
             seqlist.append(newseq)
-    else:
-        raise SequenceError("Invalid 'nsequences' of %r." % nsequences)
     return seqlist
