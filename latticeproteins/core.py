@@ -11,7 +11,7 @@ def next_monomer_location(location, bond_dir):
 
 class Conformation:
     def __init__(self, bond_dirs):
-        self.bond_dirs = bond_dirs
+        self.bond_dirs = list(bond_dirs)
         self._set_locations()
 
     def __getitem__(self, item):
@@ -22,6 +22,12 @@ class Conformation:
 
     def __iter__(self):
         yield from self.bond_dirs
+
+    def __repr__(self):
+        return "Conformation({})".format("".join(self.bond_dirs))
+
+    def __str__(self):
+        return "".join(self.bond_dirs)
 
     def _set_locations(self):
         location = (0, 0)
@@ -147,6 +153,9 @@ class Protein:
     def __init__(self, seq, conformation=None):
         self.seq = seq
         self.conformation = conformation
+
+    def __repr__(self):
+        return "Protein(seq={}, conformation={})".format(self.seq, self.conformation)
 
     def set_conformation(self, conformation):
         self.conformation = conformation
