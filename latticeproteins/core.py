@@ -12,13 +12,14 @@ def next_monomer_location(location, bond_dir):
 class Conformation:
     def __init__(self, bond_dirs):
         self.bond_dirs = list(bond_dirs)
-        self._set_locations()
+        self._update_locations() # TODO: don't do this every time
 
     def __getitem__(self, item):
         return self.bond_dirs[item]
 
     def __setitem__(self, key, value):
         self.bond_dirs[key] = value
+        self._update_locations()
 
     def __iter__(self):
         yield from self.bond_dirs
@@ -29,27 +30,35 @@ class Conformation:
     def __str__(self):
         return "".join(self.bond_dirs)
 
-    def _set_locations(self):
+    def get_bond_dirs(self):
+        return self.bond_dirs
+
+    def set_bond_dirs(self, bond_dirs):
+        self.bond_dirs = bond_dirs
+        self._update_locations()
+
+    def _update_locations(self): # TODO: start parameter
         location = (0, 0)
-        locations_to_index = dict()
+        location_to_index = dict()
         for i, bond_dir in enumerate(self.bond_dirs):
-            locations_to_index[location] = i
+            location_to_index[location] = i
             location = next_monomer_location(location, bond_dir)
-        self.locations_to_index = locations_to_index
+        self.location_to_index = location_to_index
 
     def get_locations(self):
-        return self.locations_to_index.keys()
+        return self.location_to_index.keys()
 
     def overlapping(self):
         return len(self.bond_dirs) != len(set(self.get_locations()))
 
     def _forward_contacts(self):
-        index_to_contacts = dict()
-        for i, location in enumerate(self.get_locations()):
+        locations = self.get_locations()
+        index_to_contacts = {i: [] for i in range(len(locations))}
+        for i, location in enumerate(locations):
             for bond_dir in ['U', 'R', 'D', 'L']:
                 adjacent_location = next_monomer_location(location, bond_dir)
                 if adjacent_location in self.get_locations():
-                    j = self.locations_to_index[adjacent_location]
+                    j = self.location_to_index[adjacent_location]
                     if j > i + 1:
                         index_to_contacts[i].append(j)
         return index_to_contacts
@@ -63,7 +72,7 @@ class Conformation:
 
 
 class Lattice:
-    def __init__(self, L, interaction_energies=miyazawa_jernigan, pickle_dir="database/"):
+    def __init__(self, L, interaction_energies=miyazawa_jernigan):
         self.L = L
         self.interaction_energies = interaction_energies
 
