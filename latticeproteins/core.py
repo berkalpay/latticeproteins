@@ -1,7 +1,5 @@
-import os
 import math
-import numpy as np
-from copy import copy
+from copy import deepcopy
 from latticeproteins.interactions import miyazawa_jernigan
 
 
@@ -39,7 +37,7 @@ class Conformation:
     def overlapping(self):
         return len(self.bond_dirs) != len(set(self.get_locations()))
 
-    def forward_contacts(self):
+    def _forward_contacts(self):
         index_to_contacts = dict()
         for i, location in enumerate(self.get_locations()):
             for bond_dir in ['U', 'R', 'D', 'L']:
@@ -49,6 +47,13 @@ class Conformation:
                     if j > i + 1:
                         index_to_contacts[i].append(j)
         return index_to_contacts
+
+    def contacts(self):
+        pairs = []
+        for aa1, aa_forward_contacts in self._forward_contacts().items():
+            for aa2 in aa_forward_contacts:
+                pairs.append((aa1, aa2))
+        return pairs
 
 
 class Lattice:
@@ -91,7 +96,7 @@ class Lattice:
                 res_coords.append((x, y))
             else:  # loop finishes normally, this is a valid conformation
                 # generate the next conformation
-                conformations.append(copy(conformation))
+                conformations.append(deepcopy(conformation))
                 i = n
                 conformation[i] = next[conformation[i]]
                 while conformation[i] == 'U':
@@ -109,9 +114,33 @@ class Lattice:
 
         self.conformations = conformations
 
+    # TODO: accelerate using Cython
+    def energy(self, seq, conformation):
+        energy = 0
+        for i, j in conformation.contacts():
+            aa1 = seq[i]
+            aa2 = seq[j]
+            energy += self.interaction_energies[aa1+aa2]
+        return energy
+
+    def energies(self, seq):
+        return [self.energy(seq, conformation) for conformation in self.conformations]
+
+    def minE_conformations(self, seq):
+        minE = math.inf
+        minE_conformations = []
+        for i, energy in enumerate(self.energies(seq)):
+            if energy < minE:
+                minE = energy
+                minE_conformations = [self.conformations[i]]
+            elif energy == minE:
+                minE_conformations.append(self.conformations[i])
+        return minE_conformations
+
     def fold(self, protein):
-        # Accelerate by Cython
-        pass
+        minE_conformations = self.minE_conformations(protein.seq)
+        if len(minE_conformations) == 1:
+            protein.set_conformation(minE_conformations[0])
 
 
 class Protein:
@@ -122,8 +151,3 @@ class Protein:
     def set_conformation(self, conformation):
         self.conformation = conformation
 
-    # TODO: should this be here?
-    def energy(self, conformation):
-        contacts = conformation.forward_contacts()
-        energy = sum([interactions[c] for c in contacts])
-        return energy
