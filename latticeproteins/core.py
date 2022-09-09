@@ -25,8 +25,11 @@ class Conformation:
     def __eq__(self, other):
         return self.bond_dirs == other.bond_dirs
 
+    def __hash__(self):
+        return hash(tuple(self.bond_dirs))
+
     def __repr__(self):
-        return "Conformation({})".format("".join(self.bond_dirs))
+        return "Conformation(\"{}\")".format("".join(self.bond_dirs))
 
     def __str__(self):
         return "".join(self.bond_dirs)
