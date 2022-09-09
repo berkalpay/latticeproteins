@@ -1,5 +1,4 @@
 import math
-from copy import deepcopy
 from latticeproteins.interactions import miyazawa_jernigan
 
 
@@ -109,7 +108,7 @@ class Lattice:
                 res_coords.append((x, y))
             else:  # loop finishes normally, this is a valid conformation
                 # generate the next conformation
-                conformations.append(deepcopy(conformation))
+                conformations.append(Conformation(conformation.bond_dirs))
                 i = n
                 conformation[i] = next[conformation[i]]
                 while conformation[i] == 'U':
