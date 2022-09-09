@@ -9,6 +9,16 @@ def next_monomer_location(location, bond_dir):
     return location[0] + bond_dir_to_dx[bond_dir], location[1] + bond_dir_to_dy[bond_dir]
 
 
+def group_into_contacts(conformations):
+    # TODO: decide whether to implement
+    contacts_to_conformations = dict()
+    for i, conformation in enumerate(conformations):
+        contacts = conformation.contacts()
+        if contacts in contacts_to_conformations:
+            pass
+    return contacts_to_conformations
+
+
 class Conformation:
     def __init__(self, bond_dirs):
         self.bond_dirs = list(bond_dirs)
@@ -23,6 +33,9 @@ class Conformation:
 
     def __iter__(self):
         yield from self.bond_dirs
+
+    def __eq__(self, other):
+        return self.bond_dirs == other.bond_dirs
 
     def __repr__(self):
         return "Conformation({})".format("".join(self.bond_dirs))
@@ -138,13 +151,17 @@ class Lattice:
             energy += self.interaction_energies[aa1+aa2]
         return energy
 
-    def energies(self, seq):
-        return [self.energy(seq, conformation) for conformation in self.conformations]
+    def energies(self, seq, conformations):
+        # TODO: decide whether to optimize
+        return [self.energy(seq, conformation) for conformation in conformations]
+
+    def all_energies(self, seq):
+        return self.energies(seq, self.conformations)
 
     def minE_conformations(self, seq):
         minE = math.inf
         minE_conformations = []
-        for i, energy in enumerate(self.energies(seq)):
+        for i, energy in enumerate(self.all_energies(seq)):
             if energy < minE:
                 minE = energy
                 minE_conformations = [self.conformations[i]]
