@@ -12,14 +12,12 @@ def next_monomer_location(location, bond_dir):
 class Conformation:
     def __init__(self, bond_dirs):
         self.bond_dirs = list(bond_dirs)
-        self._update_locations() # TODO: don't do this every time
 
     def __getitem__(self, item):
         return self.bond_dirs[item]
 
     def __setitem__(self, key, value):
         self.bond_dirs[key] = value
-        self._update_locations()
 
     def __iter__(self):
         yield from self.bond_dirs
@@ -38,21 +36,15 @@ class Conformation:
 
     def set_bond_dirs(self, bond_dirs):
         self.bond_dirs = bond_dirs
-        self._update_locations()
-
-    def _update_locations(self): # TODO: start parameter
-        location = (0, 0)
-        location_to_index = dict()
-        for i, bond_dir in enumerate(self.bond_dirs):
-            location_to_index[location] = i
-            location = next_monomer_location(location, bond_dir)
-        self.location_to_index = location_to_index
 
     def get_locations(self):
-        return self.location_to_index.keys()
+        locations = [(0, 0)]
+        for bond_dir in self.bond_dirs:
+            locations.append(next_monomer_location(locations[-1], bond_dir))
+        return locations
 
     def overlapping(self):
-        return len(self.bond_dirs) != len(set(self.get_locations()))
+        return len(self.bond_dirs) != len(set(self.get_locations())) - 1
 
     def _forward_contacts(self):
         locations = self.get_locations()
@@ -60,8 +52,8 @@ class Conformation:
         for i, location in enumerate(locations):
             for bond_dir in ['U', 'R', 'D', 'L']:
                 adjacent_location = next_monomer_location(location, bond_dir)
-                if adjacent_location in self.get_locations():
-                    j = self.location_to_index[adjacent_location]
+                if adjacent_location in locations:
+                    j = locations.index(adjacent_location)
                     if j > i + 1:
                         index_to_contacts[i].append(j)
         return index_to_contacts
