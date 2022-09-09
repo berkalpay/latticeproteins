@@ -9,16 +9,6 @@ def next_monomer_location(location, bond_dir):
     return location[0] + bond_dir_to_dx[bond_dir], location[1] + bond_dir_to_dy[bond_dir]
 
 
-def group_into_contacts(conformations):
-    # TODO: decide whether to implement
-    contacts_to_conformations = dict()
-    for i, conformation in enumerate(conformations):
-        contacts = conformation.contacts()
-        if contacts in contacts_to_conformations:
-            pass
-    return contacts_to_conformations
-
-
 class Conformation:
     def __init__(self, bond_dirs):
         self.bond_dirs = list(bond_dirs)
