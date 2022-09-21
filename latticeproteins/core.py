@@ -1,6 +1,6 @@
 import math
+from functools import cached_property
 from latticeproteins.interactions import miyazawa_jernigan
-
 
 def next_monomer_location(location, bond_dir):
     bond_dir_to_dx = {'U': 0, 'R': 1, 'D': 0, 'L': -1}
@@ -10,13 +10,23 @@ def next_monomer_location(location, bond_dir):
 
 class Conformation:
     def __init__(self, bond_dirs):
-        self.bond_dirs = list(bond_dirs)
+        self._bond_dirs = list(bond_dirs)
+
+    @property
+    def bond_dirs(self):
+        return self._bond_dirs
+
+    @bond_dirs.setter
+    def bond_dirs(self, value):
+        self._bond_dirs = value
+        self.__dict__.pop("contacts", None)
 
     def __getitem__(self, item):
         return self.bond_dirs[item]
 
     def __setitem__(self, key, value):
         self.bond_dirs[key] = value
+        self.__dict__.pop("contacts", None)
 
     def __iter__(self):
         yield from self.bond_dirs
@@ -60,6 +70,7 @@ class Conformation:
                         index_to_contacts[i].append(j)
         return index_to_contacts
 
+    @cached_property
     def contacts(self):
         pairs = []
         for aa1, aa_forward_contacts in self._forward_contacts().items():
@@ -126,10 +137,9 @@ class Lattice:
 
         self.conformations = conformations
 
-    # TODO: accelerate using Cython
     def energy(self, seq, conformation):
         energy = 0
-        for i, j in conformation.contacts():
+        for i, j in conformation.contacts:
             aa1 = seq[i]
             aa2 = seq[j]
             energy += self.interaction_energies[aa1+aa2]
