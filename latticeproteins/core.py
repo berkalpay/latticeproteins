@@ -156,6 +156,10 @@ class Ensemble:
     def conformations_with_contact_set(self, contact_set):
         return self.contact_sets_to_conformations[contact_set]
 
+    @cached_property
+    def contact_set_multiplicities(self):
+        return [len(self.conformations_with_contact_set(cs)) for cs in self.contact_sets]
+
 
 class Lattice:
     def __init__(self, L, interaction_energies=miyazawa_jernigan):
@@ -172,7 +176,7 @@ class Lattice:
             aa1 = seq[i]
             aa2 = seq[j]
             energy += self.interaction_energies[aa1 + aa2]
-        return energy
+        return energy # TODO: improve precision handling
 
     def energy(self, seq, conformation):
         return self.sum_contact_energy(seq, conformation.contacts)
@@ -184,14 +188,8 @@ class Lattice:
             contact_set_energies[i] = self.sum_contact_energy(seq, contact_set)
         return contact_set_energies
 
-    def energies(self, seq):
-        n_contact_sets = len(self.ensemble.contact_sets)
-        contact_set_energies = np.empty(n_contact_sets)
-        contact_set_lens = np.empty(n_contact_sets, dtype="int")
-        for i, contact_set in enumerate(self.ensemble.contact_sets):
-            contact_set_energies[i] = self.sum_contact_energy(seq, contact_set)
-            contact_set_lens[i] = len(self.ensemble.conformations_with_contact_set(contact_set))
-        return np.repeat(contact_set_energies, contact_set_lens)
+    def conformation_energies(self, seq):
+        return np.repeat(self.contact_set_energies(seq), self.ensemble.contact_set_multiplicities)
 
     def minE_conformations(self, seq):
         energies = self.contact_set_energies(seq)
