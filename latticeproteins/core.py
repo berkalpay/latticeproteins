@@ -146,12 +146,6 @@ class Ensemble:
         for conformation in conformations:
             self.add(conformation)
 
-    def __iter__(self):
-        yield from self.contact_sets_to_conformations
-
-    def __getitem__(self, item):
-        return self.contact_sets_to_conformations[item]
-
     def add(self, conformation):
         self.conformations.append(conformation)
         contacts = frozenset(conformation.contacts)
@@ -159,6 +153,13 @@ class Ensemble:
             self.contact_sets_to_conformations[contacts].append(conformation) # TODO: what if conformation changes?
         except KeyError:
             self.contact_sets_to_conformations[contacts] = [conformation]
+
+    @property
+    def contact_sets(self):
+        return self.contact_sets_to_conformations.keys()
+
+    def conformations_with_contact_set(self, contact_set):
+        return self.contact_sets_to_conformations[contact_set]
 
 
 class Lattice:
@@ -182,12 +183,12 @@ class Lattice:
         return self.sum_contact_energy(seq, conformation.contacts)
 
     def energies(self, seq):
-        n_contact_sets = len(self.ensemble.contact_sets_to_conformations)
+        n_contact_sets = len(self.ensemble.contact_sets)
         contact_set_energies = np.empty(n_contact_sets)
         contact_set_lens = np.empty(n_contact_sets, dtype="int")
-        for i, contact_set in enumerate(self.ensemble):
+        for i, contact_set in enumerate(self.ensemble.contact_sets):
             contact_set_energies[i] = self.sum_contact_energy(seq, contact_set)
-            contact_set_lens[i] = len(self.ensemble[contact_set])
+            contact_set_lens[i] = len(self.ensemble.conformations_with_contact_set(contact_set))
         return np.repeat(contact_set_energies, contact_set_lens)
 
     def minE_conformations(self, seq):
@@ -197,6 +198,7 @@ class Lattice:
 
     def fold(self, protein):
         minE_conformations = self.minE_conformations(protein.seq)
+        print(minE_conformations)
         if len(minE_conformations) == 1:
             protein.set_conformation(minE_conformations[0])
 
