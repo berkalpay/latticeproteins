@@ -191,17 +191,9 @@ class Lattice:
         return np.repeat(contact_set_energies, contact_set_lens)
 
     def minE_conformations(self, seq):
-        minE = math.inf
-        minE_conformations = []
         energies = self.energies(seq)
-        for i in range(len(self.ensemble.conformations)):
-            energy = energies[i]
-            if energy < minE:
-                minE = energy
-                minE_conformations = [self.ensemble.conformations[i]]
-            elif energy == minE:
-                minE_conformations.append(self.ensemble.conformations[i])
-        return minE_conformations
+        minE_indices = np.where(energies == energies.min())[0]
+        return [self.ensemble.conformations[i] for i in minE_indices]
 
     def fold(self, protein):
         minE_conformations = self.minE_conformations(protein.seq)
