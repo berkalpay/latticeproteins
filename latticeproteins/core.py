@@ -1,5 +1,6 @@
 import math
 from functools import cached_property
+import numpy as np
 from latticeproteins.interactions import miyazawa_jernigan
 
 
@@ -181,12 +182,13 @@ class Lattice:
         return self.sum_contact_energy(seq, conformation.contacts)
 
     def energies(self, seq):
-        energies = []
-        for contact_set in self.ensemble:
-            energy = self.sum_contact_energy(seq, contact_set)
-            for _ in range(len(self.ensemble[contact_set])):
-                energies.append(energy)
-        return energies
+        n_contact_sets = len(self.ensemble.contact_sets_to_conformations)
+        contact_set_energies = np.empty(n_contact_sets)
+        contact_set_lens = np.empty(n_contact_sets, dtype="int")
+        for i, contact_set in enumerate(self.ensemble):
+            contact_set_energies[i] = self.sum_contact_energy(seq, contact_set)
+            contact_set_lens[i] = len(self.ensemble[contact_set])
+        return np.repeat(contact_set_energies, contact_set_lens)
 
     def minE_conformations(self, seq):
         minE = math.inf
