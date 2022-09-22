@@ -137,10 +137,13 @@ def generate_full_conformation_space(L):
 
 class Ensemble:
     def __init__(self, conformations=None):
+        if conformations is None:
+            conformations = []
+        self.conformations = []
+
         self.contact_sets_to_conformations = dict()
-        if conformations:
-            for conformation in conformations:
-                self.add(conformation)
+        for conformation in conformations:
+            self.add(conformation)
 
     def __iter__(self):
         yield from self.contact_sets_to_conformations
@@ -149,6 +152,7 @@ class Ensemble:
         return self.contact_sets_to_conformations[item]
 
     def add(self, conformation):
+        self.conformations.append(conformation)
         contacts = frozenset(conformation.contacts)
         try:
             self.contact_sets_to_conformations[contacts].append(conformation) # TODO: what if conformation changes?
@@ -177,22 +181,24 @@ class Lattice:
         return self.sum_contact_energy(seq, conformation.contacts)
 
     def energies(self, seq):
-        conformation_to_energy = dict()
+        energies = []
         for contact_set in self.ensemble:
             energy = self.sum_contact_energy(seq, contact_set)
-            for conformation in self.ensemble[contact_set]:
-                conformation_to_energy[conformation] = energy
-        return conformation_to_energy
+            for _ in range(len(self.ensemble[contact_set])):
+                energies.append(energy)
+        return energies
 
     def minE_conformations(self, seq):
         minE = math.inf
         minE_conformations = []
-        for conformation, energy in self.energies(seq).items():
+        energies = self.energies(seq)
+        for i in range(len(self.ensemble.conformations)):
+            energy = energies[i]
             if energy < minE:
                 minE = energy
-                minE_conformations = [conformation]
+                minE_conformations = [self.ensemble.conformations[i]]
             elif energy == minE:
-                minE_conformations.append(conformation)
+                minE_conformations.append(self.ensemble.conformations[i])
         return minE_conformations
 
     def fold(self, protein):
