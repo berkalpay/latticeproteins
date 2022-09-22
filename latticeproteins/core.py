@@ -1,4 +1,3 @@
-import math
 from functools import cached_property
 import numpy as np
 from latticeproteins.interactions import miyazawa_jernigan
@@ -140,23 +139,19 @@ class Ensemble:
     def __init__(self, conformations=None):
         if conformations is None:
             conformations = []
-        self.conformations = []
 
         self.contact_sets_to_conformations = dict()
+        self.contact_sets = []
         for conformation in conformations:
             self.add(conformation)
 
     def add(self, conformation):
-        self.conformations.append(conformation)
         contacts = frozenset(conformation.contacts)
         try:
             self.contact_sets_to_conformations[contacts].append(conformation) # TODO: what if conformation changes?
         except KeyError:
             self.contact_sets_to_conformations[contacts] = [conformation]
-
-    @property
-    def contact_sets(self):
-        return self.contact_sets_to_conformations.keys()
+            self.contact_sets.append(contacts)
 
     def conformations_with_contact_set(self, contact_set):
         return self.contact_sets_to_conformations[contact_set]
@@ -182,6 +177,13 @@ class Lattice:
     def energy(self, seq, conformation):
         return self.sum_contact_energy(seq, conformation.contacts)
 
+    def contact_set_energies(self, seq):
+        n_contact_sets = len(self.ensemble.contact_sets)
+        contact_set_energies = np.empty(n_contact_sets)
+        for i, contact_set in enumerate(self.ensemble.contact_sets):
+            contact_set_energies[i] = self.sum_contact_energy(seq, contact_set)
+        return contact_set_energies
+
     def energies(self, seq):
         n_contact_sets = len(self.ensemble.contact_sets)
         contact_set_energies = np.empty(n_contact_sets)
@@ -192,9 +194,14 @@ class Lattice:
         return np.repeat(contact_set_energies, contact_set_lens)
 
     def minE_conformations(self, seq):
-        energies = self.energies(seq)
+        energies = self.contact_set_energies(seq)
         minE_indices = np.where(energies == energies.min())[0]
-        return [self.ensemble.conformations[i] for i in minE_indices]
+        minE_contact_sets = [self.ensemble.contact_sets[i] for i in minE_indices]
+        minE_conformations = []
+        for contact_set in minE_contact_sets:
+            for conformation in self.ensemble.conformations_with_contact_set(contact_set):
+                minE_conformations.append(conformation)
+        return minE_conformations
 
     def fold(self, protein):
         minE_conformations = self.minE_conformations(protein.seq)
