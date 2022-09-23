@@ -1,6 +1,8 @@
-from functools import cached_property
+from functools import cached_property, lru_cache
+from dataclasses import dataclass
 import numpy as np
 from latticeproteins.interactions import miyazawa_jernigan
+from typing import List
 
 
 def next_monomer_location(location, bond_dir):
@@ -181,6 +183,7 @@ class Lattice:
     def energy(self, seq, conformation):
         return self.sum_contact_energy(seq, conformation.contacts)
 
+    @lru_cache(maxsize=16)
     def contact_set_energies(self, seq):
         n_contact_sets = len(self.ensemble.contact_sets)
         contact_set_energies = np.empty(n_contact_sets)
@@ -190,6 +193,9 @@ class Lattice:
 
     def conformation_energies(self, seq):
         return np.repeat(self.contact_set_energies(seq), self.ensemble.contact_set_multiplicities)
+
+    def partition_sum(self, seq):
+        return np.dot(self.contact_set_energies(seq), self.ensemble.contact_set_multiplicities)
 
     def minE_conformations(self, seq):
         energies = self.contact_set_energies(seq)
@@ -202,19 +208,22 @@ class Lattice:
         return minE_conformations
 
     def fold(self, protein):
-        minE_conformations = self.minE_conformations(protein.seq)
-        print(minE_conformations)
-        if len(minE_conformations) == 1:
-            protein.set_conformation(minE_conformations[0])
+        protein.conformations = self.minE_conformations(protein.seq)
+        protein.energy = self.energy(protein.seq, protein.conformations[0])
+        protein.partition_sum = self.partition_sum(protein.seq)
 
 
+@dataclass
 class Protein:
-    def __init__(self, seq, conformation=None):
-        self.seq = seq
-        self.conformation = conformation
+    seq: str
+    conformations: List[Conformation] = None
+    energy: float = None
+    partition_sum: float = None
 
-    def __repr__(self):
-        return "Protein(seq={}, conformation={})".format(self.seq, self.conformation)
+    def stability(self, temp):
+        assert isinstance(temp, (int, float)) and temp > 0
+        return self.energy + temp * np.log(self.partition_sum - np.exp(-self.energy / temp))
 
-    def set_conformation(self, conformation):
-        self.conformation = conformation
+    def frac_folded(self, temp):
+        assert isinstance(temp, (int, float)) and temp > 0
+        return 1.0 / (1.0 + np.exp(self.stability() / temp))
