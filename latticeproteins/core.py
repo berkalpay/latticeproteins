@@ -1,8 +1,9 @@
 from functools import cached_property, lru_cache
 from dataclasses import dataclass
+from typing import List
+from itertools import chain
 import numpy as np
 from latticeproteins.interactions import miyazawa_jernigan
-from typing import List
 
 
 def next_monomer_location(location, bond_dir):
@@ -162,6 +163,8 @@ class Ensemble:
     def contact_set_multiplicities(self):
         return [len(self.conformations_with_contact_set(cs)) for cs in self.contact_sets]
 
+    def conformations(self):
+        return chain(*self.contact_sets_to_conformations.values())
 
 class Lattice:
     def __init__(self, L, interaction_energies=miyazawa_jernigan):
