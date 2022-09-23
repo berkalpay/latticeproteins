@@ -216,6 +216,10 @@ class Lattice:
         protein.partition_sum = self.partition_sum(protein.seq)
 
 
+class ProteinNotFoldedError(Exception):
+    """Protein hasn't been folded yet, so certain of its attributes are not known."""
+
+
 @dataclass
 class Protein:
     seq: str
@@ -223,7 +227,16 @@ class Protein:
     energy: float = None
     partition_sum: float = None
 
+    def native_state(self):
+        if self.conformations is None:
+            raise ProteinNotFoldedError
+
+        return self.conformations if len(self.conformations) == 1 else None
+
     def stability(self, temp):
+        if self.conformations is None:
+            raise ProteinNotFoldedError
+
         assert isinstance(temp, (int, float)) and temp > 0
         return self.energy + temp * np.log(self.partition_sum - np.exp(-self.energy / temp))
 
