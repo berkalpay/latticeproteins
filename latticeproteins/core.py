@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import List
 from itertools import chain
 import numpy as np
+from scipy.special import logsumexp
 from latticeproteins.interactions import miyazawa_jernigan
 
 
@@ -163,6 +164,10 @@ class Ensemble:
     def contact_set_multiplicities(self):
         return [len(self.conformations_with_contact_set(cs)) for cs in self.contact_sets]
 
+    @cached_property
+    def num_conformations(self):
+        return sum(self.contact_set_multiplicities)
+
     def conformations(self):
         return chain(*self.contact_sets_to_conformations.values())
 
@@ -197,9 +202,14 @@ class Lattice:
     def conformation_energies(self, seq):
         return np.repeat(self.contact_set_energies(seq), self.ensemble.contact_set_multiplicities)
 
-    def partition_sum(self, seq):
-        return np.dot(self.contact_set_energies(seq), self.ensemble.contact_set_multiplicities)
+    def partition_sum(self, seq, temp=1): # TODO: don't set this temp default
+        minE_conformations = self.minE_conformations(seq)
+        minE = self.energy(seq, minE_conformations[0])
+        conformation_energies = self.conformation_energies(seq)
+        return logsumexp(np.append(-self.conformation_energies(seq)/temp, -minE/temp * len(minE_conformations)), # TODO: optimize?
+                         b=[1]*len(conformation_energies) + [-1])
 
+    @lru_cache(maxsize=16)
     def minE_conformations(self, seq):
         energies = self.contact_set_energies(seq)
         minE_indices = np.where(energies == energies.min())[0]
@@ -236,9 +246,9 @@ class Protein:
     def stability(self, temp):
         if self.conformations is None:
             raise ProteinNotFoldedError
-
         assert isinstance(temp, (int, float)) and temp > 0
-        return self.energy + temp * np.log(self.partition_sum - np.exp(-self.energy / temp))
+
+        return self.energy + temp * self.partition_sum # TODO: rename partition_sum
 
     def frac_folded(self, temp):
         assert isinstance(temp, (int, float)) and temp > 0
