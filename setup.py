@@ -1,7 +1,4 @@
 from setuptools import setup
-from distutils.extension import Extension
-
-contactlooper = Extension('latticeproteins.contactlooper', sources = ['latticeproteins/contactlooper.c'])
 
 setup(
     name = 'latticeproteins',
@@ -9,7 +6,6 @@ setup(
     description = 'Code for lattice protein simulations.',
     url='https://github.com/berkalpay/latticeproteins',
     packages = ['latticeproteins'],
-    ext_modules = [contactlooper],
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Science/Research',
