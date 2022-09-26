@@ -2,8 +2,10 @@ from functools import cached_property, lru_cache
 from dataclasses import dataclass
 from typing import List
 from itertools import chain
+
 import numpy as np
 from scipy.special import logsumexp
+
 from latticeproteins.interactions import miyazawa_jernigan
 
 
@@ -87,20 +89,17 @@ class Conformation:
 def generate_full_conformation_space(L):
     # Generate conformations
     conformations = []
-    dx = {'U': 0, 'R': 1, 'D': 0, 'L': -1}
-    dy = {'U': 1, 'R': 0, 'D': -1, 'L': 0}
     next = {'U': 'R', 'R': 'D', 'D': 'L', 'L': 'U'}
     n = L - 2  # index of last bond in 'conformation'
     first_R = n  # index of the first 'R' in the conformation
     conformation = ['U'] * (n + 1)
-    while True:
+    while first_R > 0:
         # See if the current conformation has overlap
         x = y = j = 0
         res_positions = {(x, y): j}  # keyed by coords, items are residue numbers
         res_coords = [(x, y)]  # 'res_coords[j]' is coords of residue 'j'
         for c in conformation:
-            x += dx[c]
-            y += dy[c]
+            x, y = next_monomer_location((x, y), c)
             if (x, y) in res_positions:  # overlap
                 # increment at the step that gave the problem
                 for k in range(j + 1, n + 1):
@@ -132,9 +131,6 @@ def generate_full_conformation_space(L):
                 conformation[first_R] = 'R'
                 for j in range(i, n + 1):
                     conformation[j] = 'U'
-        # see if we are done
-        if first_R == 0:
-            break
 
     return conformations
 
