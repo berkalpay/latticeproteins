@@ -1,4 +1,4 @@
-from latticeproteins.core import Conformation, Lattice
+from latticeproteins import Conformation, Lattice
 
 
 def test_locations():

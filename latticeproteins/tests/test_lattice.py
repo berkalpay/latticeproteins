@@ -1,7 +1,7 @@
 from unittest import TestCase
 import pickle
 
-from latticeproteins.core import Lattice, Protein
+from latticeproteins import Lattice, Protein
 
 
 def test_num_conformations():
