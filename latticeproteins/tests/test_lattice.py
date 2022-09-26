@@ -16,10 +16,10 @@ class TestFolding(TestCase):
         self.lattice.fold(self.protein)
 
     def test_does_fold(self):
-        assert self.protein.native_state()
+        assert self.protein.native_state
 
     def test_conformation(self):
-        assert self.protein.native_state().bond_dirs == "URDRURDDDDLUULLDR"
+        assert self.protein.native_state.bond_dirs == "URDRURDDDDLUULLDR"
 
     def test_stability(self):
         assert round(self.protein.stability(temp=1.0), 2) == -1.04

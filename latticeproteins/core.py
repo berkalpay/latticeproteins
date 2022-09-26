@@ -226,6 +226,7 @@ class Protein:
     lattice: Lattice = None
     energy: float = None
 
+    @property
     def native_state(self):
         if self.conformations is None:
             raise ProteinNotFoldedError
