@@ -87,7 +87,8 @@ class Conformation:
 
 
 def generate_full_conformation_space(L):
-    # Generate conformations
+    """Return all self-avoiding walks of length 'L' with the first bond Up and the first non-Up bond Right."""
+
     conformations = []
     next = {'U': 'R', 'R': 'D', 'D': 'L', 'L': 'U'}
     n = L - 2  # index of last bond in 'conformation'
