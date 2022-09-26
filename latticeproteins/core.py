@@ -202,13 +202,6 @@ class Lattice:
     def conformation_energies(self, seq):
         return np.repeat(self.contact_set_energies(seq), self.ensemble.contact_set_multiplicities)
 
-    def partition_sum(self, seq, temp=1): # TODO: don't set this temp default
-        minE_conformations = self.minE_conformations(seq)
-        minE = self.energy(seq, minE_conformations[0])
-        conformation_energies = self.conformation_energies(seq)
-        return logsumexp(np.append(-self.conformation_energies(seq)/temp, -minE/temp * len(minE_conformations)), # TODO: optimize?
-                         b=[1]*len(conformation_energies) + [-1])
-
     @lru_cache(maxsize=16)
     def minE_conformations(self, seq):
         energies = self.contact_set_energies(seq)
@@ -222,8 +215,8 @@ class Lattice:
 
     def fold(self, protein):
         protein.conformations = self.minE_conformations(protein.seq)
+        protein.lattice = self
         protein.energy = self.energy(protein.seq, protein.conformations[0])
-        protein.partition_sum = self.partition_sum(protein.seq)
 
 
 class ProteinNotFoldedError(Exception):
@@ -234,8 +227,8 @@ class ProteinNotFoldedError(Exception):
 class Protein:
     seq: str
     conformations: List[Conformation] = None
+    lattice: Lattice = None
     energy: float = None
-    partition_sum: float = None
 
     def native_state(self):
         if self.conformations is None:
@@ -243,13 +236,19 @@ class Protein:
 
         return self.conformations if len(self.conformations) == 1 else None
 
-    def stability(self, temp):
+    def partition_factor(self, temp=1.0):
+        minE = self.lattice.energy(self.seq, self.conformations[0])
+        conformation_energies = self.lattice.conformation_energies(self.seq)
+        return logsumexp(np.append(-self.lattice.conformation_energies(self.seq)/temp, -minE/temp * len(self.conformations)), # TODO: optimize?
+                         b=[1]*len(conformation_energies) + [-1])
+
+    def stability(self, temp=1.0):
         if self.conformations is None:
             raise ProteinNotFoldedError
         assert isinstance(temp, (int, float)) and temp > 0
 
-        return self.energy + temp * self.partition_sum # TODO: rename partition_sum
+        return self.energy + temp * self.partition_factor(temp)
 
-    def frac_folded(self, temp):
+    def frac_folded(self, temp=1.0):
         assert isinstance(temp, (int, float)) and temp > 0
         return 1.0 / (1.0 + np.exp(self.stability() / temp))
