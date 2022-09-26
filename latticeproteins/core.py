@@ -251,4 +251,4 @@ class Protein:
 
     def frac_folded(self, temp=1.0):
         assert isinstance(temp, (int, float)) and temp > 0
-        return 1.0 / (1.0 + np.exp(self.stability() / temp))
+        return 1.0 / (1.0 + np.exp(self.stability(temp) / temp))
