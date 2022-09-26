@@ -167,6 +167,7 @@ class Ensemble:
     def conformations(self):
         return chain(*self.contact_sets_to_conformations.values())
 
+
 class Lattice:
     def __init__(self, L, interaction_energies=miyazawa_jernigan):
         self.L = L
@@ -234,11 +235,9 @@ class Protein:
         return self.conformations[0] if len(self.conformations) == 1 else None
 
     def partition_factor(self, temp=1.0):
-        minE = self.lattice.energy(self.seq, self.conformations[0])
-        conformation_energies = self.lattice.conformation_energies(self.seq)
-        # TODO: optimize?
-        return logsumexp(np.append(-self.lattice.conformation_energies(self.seq)/temp, -minE/temp * len(self.conformations)),
-                         b=[1]*len(conformation_energies) + [-1])
+        normalized_energies = np.append(-self.lattice.contact_set_energies(self.seq)/temp, -self.energy/temp)
+        multiplicities = self.lattice.ensemble.contact_set_multiplicities + [-len(self.conformations)]
+        return logsumexp(normalized_energies, b=multiplicities)
 
     def stability(self, temp=1.0):
         if self.conformations is None:
