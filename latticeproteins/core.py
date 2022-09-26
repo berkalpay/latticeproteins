@@ -148,7 +148,7 @@ class Ensemble:
     def add(self, conformation):
         contacts = frozenset(conformation.contacts)
         try:
-            self.contact_sets_to_conformations[contacts].append(conformation) # TODO: what if conformation changes?
+            self.contact_sets_to_conformations[contacts].append(conformation)  # TODO: what if conformation changes?
         except KeyError:
             self.contact_sets_to_conformations[contacts] = [conformation]
             self.contact_sets.append(contacts)
@@ -182,7 +182,7 @@ class Lattice:
             aa1 = seq[i]
             aa2 = seq[j]
             energy += self.interaction_energies[aa1 + aa2]
-        return energy # TODO: improve precision handling
+        return energy  # TODO: precision handling
 
     def energy(self, seq, conformation):
         return self.sum_contact_energy(seq, conformation.contacts)
@@ -230,12 +230,13 @@ class Protein:
         if self.conformations is None:
             raise ProteinNotFoldedError
 
-        return self.conformations if len(self.conformations) == 1 else None
+        return self.conformations[0] if len(self.conformations) == 1 else None
 
     def partition_factor(self, temp=1.0):
         minE = self.lattice.energy(self.seq, self.conformations[0])
         conformation_energies = self.lattice.conformation_energies(self.seq)
-        return logsumexp(np.append(-self.lattice.conformation_energies(self.seq)/temp, -minE/temp * len(self.conformations)), # TODO: optimize?
+        # TODO: optimize?
+        return logsumexp(np.append(-self.lattice.conformation_energies(self.seq)/temp, -minE/temp * len(self.conformations)),
                          b=[1]*len(conformation_energies) + [-1])
 
     def stability(self, temp=1.0):
