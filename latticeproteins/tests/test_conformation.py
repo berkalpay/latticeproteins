@@ -12,7 +12,6 @@ def test_locations_with_delta():
     true_delta_locs = set([(x-2, y+1) for x, y in true_locs])
     conformation = Conformation("UUURURDDDLL")
     conformation.location_delta = (-2, 1)
-    print(conformation.location_delta)
     assert set(conformation.locations) == true_delta_locs
 
 

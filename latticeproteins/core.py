@@ -68,7 +68,6 @@ class Conformation:
         locations = [(self.location_delta[0], self.location_delta[1])]
         for bond_dir in self.bond_dirs:
             locations.append(next_monomer_location(locations[-1], bond_dir))
-        print(locations)
         return locations
 
     @property
