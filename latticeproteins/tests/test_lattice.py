@@ -5,7 +5,7 @@ from latticeproteins import Lattice, Protein
 
 
 def test_num_conformations():
-    assert len(list(Lattice(L=6).ensemble.conformations())) == 36
+    assert len(list(Lattice(L=6).ensemble.conformations)) == 36
 
 
 class TestFolding(TestCase):

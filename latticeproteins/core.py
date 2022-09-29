@@ -188,6 +188,7 @@ class Ensemble:
     def num_conformations(self):
         return sum(self.contact_set_multiplicities)
 
+    @property
     def conformations(self):
         return chain(*self.contact_sets_to_conformations.values())
 

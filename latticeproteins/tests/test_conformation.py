@@ -20,4 +20,4 @@ def test_num_contacts():
 
 
 def test_max_num_contacts():
-    assert max(len(conf.contacts) for conf in Lattice(L=6).ensemble.conformations()) == 2
+    assert max(len(conf.contacts) for conf in Lattice(L=6).ensemble.conformations) == 2
