@@ -15,6 +15,10 @@ def next_monomer_location(location, bond_dir):
     return location[0] + bond_dir_to_dx[bond_dir], location[1] + bond_dir_to_dy[bond_dir]
 
 
+def bond_dir_rotated_clockwise(bond_dir):
+    return {'U': 'R', 'R': 'D', 'D': 'L', 'L': 'U'}[bond_dir]
+
+
 class Conformation:
     def __init__(self, bond_dirs):
         self._bond_dirs = bond_dirs
@@ -80,6 +84,30 @@ class Conformation:
             for aa2 in aa_forward_contacts:
                 pairs.append((aa1, aa2))
         return pairs
+
+    def rotated_clockwise(self):
+        rotated_bond_dirs = [bond_dir_rotated_clockwise(bond_dir) for bond_dir in self.bond_dirs]
+        return Conformation("".join(rotated_bond_dirs))
+
+    @property
+    def in_standard_form(self):
+        i = 0
+        bond_dir = self.bond_dirs[0]
+        if bond_dir == 'U':
+            return False
+        while bond_dir == 'U':
+            i += 1
+            if not self.bond_dirs[i] in ['U', 'R']:
+                return False
+        return True
+
+    @property
+    def width(self):
+        return abs(self.bond_dirs.count('R') - self.bond_dirs.count('L'))
+
+    @property
+    def height(self):
+        return abs(self.bond_dirs.count('U') - self.bond_dirs.count('D'))
 
 
 def generate_full_conformation_space(L):
