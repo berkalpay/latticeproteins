@@ -50,17 +50,19 @@ class Conformation:
     def __str__(self):
         return "".join(self.bond_dirs)
 
-    def get_locations(self):
+    @property
+    def locations(self):
         locations = [(0, 0)]
         for bond_dir in self.bond_dirs:
             locations.append(next_monomer_location(locations[-1], bond_dir))
         return locations
 
+    @property
     def overlapping(self):
-        return len(self.bond_dirs) != len(set(self.get_locations())) - 1
+        return len(self.bond_dirs) != len(set(self.locations)) - 1
 
     def _forward_contacts(self):
-        locations = self.get_locations()
+        locations = self.locations
         index_to_contacts = {i: [] for i in range(len(locations))}
         for i, location in enumerate(locations):
             for bond_dir in ['U', 'R', 'D', 'L']:
