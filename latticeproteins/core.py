@@ -198,6 +198,12 @@ class Lattice:
         self.L = L
         self.interaction_energies = interaction_energies
 
+    def __eq__(self, other):
+        return self.L == other.L and self.interaction_energies == other.interaction_energies
+
+    def __hash__(self):
+        return hash(tuple([self.L, frozenset(self.interaction_energies.items())]))
+
     @cached_property
     def ensemble(self):
         return Ensemble(generate_full_conformation_space(self.L))

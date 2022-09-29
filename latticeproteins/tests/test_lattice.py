@@ -23,3 +23,11 @@ class TestFolding(TestCase):
 
     def test_stability(self):
         assert round(self.protein.stability(temp=1.0), 2) == -1.04
+
+
+def test_lattices_equal():
+    assert Lattice(L=10) == Lattice(L=10)
+
+
+def test_lattices_unequal():
+    assert Lattice(L=9) != Lattice(L=10)
