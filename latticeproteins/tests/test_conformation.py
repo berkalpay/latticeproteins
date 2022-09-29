@@ -6,6 +6,15 @@ def test_locations():
                  (2, 4), (2, 3), (2, 2), (2, 1), (1, 1), (0, 1)}
     assert set(Conformation("UUURURDDDLL").locations) == true_locs
 
+def test_locations_with_delta():
+    true_locs = {(0, 0), (0, 1), (0, 2), (0, 3), (1, 3), (1, 4),
+                 (2, 4), (2, 3), (2, 2), (2, 1), (1, 1), (0, 1)}
+    true_delta_locs = set([(x-2, y+1) for x, y in true_locs])
+    conformation = Conformation("UUURURDDDLL")
+    conformation.location_delta = (-2, 1)
+    print(conformation.location_delta)
+    assert set(conformation.locations) == true_delta_locs
+
 
 def test_overlapping():
     assert Conformation("UUURURDDDLL").overlapping

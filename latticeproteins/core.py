@@ -20,8 +20,9 @@ def bond_dir_rotated_clockwise(bond_dir):
 
 
 class Conformation:
-    def __init__(self, bond_dirs):
+    def __init__(self, bond_dirs, location_delta=(0, 0)):
         self._bond_dirs = bond_dirs
+        self._location_delta = location_delta
 
     @property
     def bond_dirs(self):
@@ -31,6 +32,14 @@ class Conformation:
     def bond_dirs(self, value):
         self._bond_dirs = value
         self.__dict__.pop("contacts", None)
+
+    @property
+    def location_delta(self):
+        return self._location_delta
+
+    @location_delta.setter
+    def location_delta(self, value):
+        self._location_delta = value
 
     def __getitem__(self, item):
         return self.bond_dirs[item]
@@ -56,9 +65,10 @@ class Conformation:
 
     @property
     def locations(self):
-        locations = [(0, 0)]
+        locations = [(self.location_delta[0], self.location_delta[1])]
         for bond_dir in self.bond_dirs:
             locations.append(next_monomer_location(locations[-1], bond_dir))
+        print(locations)
         return locations
 
     @property
