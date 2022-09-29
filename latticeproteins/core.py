@@ -50,12 +50,6 @@ class Conformation:
     def __str__(self):
         return "".join(self.bond_dirs)
 
-    def get_bond_dirs(self):
-        return self.bond_dirs
-
-    def set_bond_dirs(self, bond_dirs):
-        self.bond_dirs = bond_dirs
-
     def get_locations(self):
         locations = [(0, 0)]
         for bond_dir in self.bond_dirs:
