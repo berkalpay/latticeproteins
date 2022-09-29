@@ -114,7 +114,6 @@ def generate_full_conformation_space(L):
     """Return all self-avoiding walks of length 'L' with the first bond Up and the first non-Up bond Right."""
 
     conformations = []
-    next = {'U': 'R', 'R': 'D', 'D': 'L', 'L': 'U'}
     n = L - 2  # index of last bond in 'conformation'
     first_R = n  # index of the first 'R' in the conformation
     conformation = ['U'] * (n + 1)
@@ -129,10 +128,10 @@ def generate_full_conformation_space(L):
                 # increment at the step that gave the problem
                 for k in range(j + 1, n + 1):
                     conformation[k] = 'U'
-                conformation[j] = next[conformation[j]]
+                conformation[j] = bond_dir_rotated_clockwise(conformation[j])
                 while conformation[j] == 'U':
                     j -= 1
-                    conformation[j] = next[conformation[j]]
+                    conformation[j] = bond_dir_rotated_clockwise(conformation[j])
                 if j == first_R and conformation[j] not in ['R', 'U']:
                     first_R -= 1
                     conformation[first_R] = 'R'
@@ -146,10 +145,10 @@ def generate_full_conformation_space(L):
             # generate the next conformation
             conformations.append(Conformation("".join(conformation)))
             i = n
-            conformation[i] = next[conformation[i]]
+            conformation[i] = bond_dir_rotated_clockwise(conformation[i])
             while conformation[i] == 'U':
                 i -= 1
-                conformation[i] = next[conformation[i]]
+                conformation[i] = bond_dir_rotated_clockwise(conformation[i])
             # make sure first non-'U' is 'R'
             if i == first_R and conformation[i] not in ['R', 'U']:
                 first_R -= 1
