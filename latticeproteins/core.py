@@ -96,8 +96,10 @@ class Conformation:
                 pairs.append((aa1, aa2))
         return pairs
 
-    def rotated_clockwise(self):
-        rotated_bond_dirs = [bond_dir_rotated_clockwise(bond_dir) for bond_dir in self.bond_dirs]
+    def rotated_clockwise(self, n=1):
+        rotated_bond_dirs = self.bond_dirs
+        for _ in range(n):
+            rotated_bond_dirs = [bond_dir_rotated_clockwise(bond_dir) for bond_dir in rotated_bond_dirs]
         return Conformation("".join(rotated_bond_dirs))
 
     @property
@@ -316,9 +318,9 @@ class Protein:
         min_binding_energy_rotations = []
         min_binding_energy_location_deltas = []
 
-        for rotation in range(4):
-            if rotation > 0:
-                ligand.conformations = [ligand.native_state.rotated_clockwise()]
+        unrotated_ligand_native_state = ligand.native_state
+        for rotations in range(4):
+            ligand.native_state = unrotated_ligand_native_state.rotated_clockwise(rotations)
             ligand_width = ligand.native_state.width
             ligand_height = ligand.native_state.height
             delta_x_range = range(-ligand_width, self.native_state.width + ligand_width)
@@ -332,10 +334,10 @@ class Protein:
                     binding_energy = self.lattice.sum_contact_energy(self.seq, contact_set, ligand.seq)
                     if binding_energy < min_binding_energy:
                         min_binding_energy = binding_energy
-                        min_binding_energy_rotations = [rotation]
+                        min_binding_energy_rotations = [rotations]
                         min_binding_energy_location_deltas = [(delta_x, delta_y)]
                     elif binding_energy == min_binding_energy:
-                        min_binding_energy_rotations.append(rotation)
+                        min_binding_energy_rotations.append(rotations)
                         min_binding_energy_location_deltas.append((delta_x, delta_y))
 
         return min_binding_energy, list(zip(min_binding_energy_rotations, min_binding_energy_location_deltas))

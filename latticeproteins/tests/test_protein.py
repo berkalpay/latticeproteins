@@ -6,7 +6,7 @@ from latticeproteins import Lattice, Protein, Conformation
 def test_binding_energy():
     protein = Protein("KIR", conformations=[Conformation("UU")], lattice=Lattice(L=3))
     ligand = Protein("NI", conformations=[Conformation("U")], lattice=Lattice(L=2))
-    ligand.native_state = ligand.native_state.rotated_clockwise().rotated_clockwise()
+    ligand.native_state = ligand.native_state.rotated_clockwise(2)
     ligand.native_state.location_delta = (-1, 2)
     print(ligand.native_state.locations)
     contact_set = protein.native_state.contacts_with(ligand.native_state)
@@ -24,6 +24,6 @@ class TestBinding(TestCase):
         assert round(self.binding_energy, 2) == -7.63
 
     def test_min_binding_positioning(self):
-        for rotation, location_delta in self.positioning_info:
-            assert rotation == 2
+        for rotations, location_delta in self.positioning_info:
+            assert rotations == 2
             assert location_delta in [(-1, 2), (1, 2)]
