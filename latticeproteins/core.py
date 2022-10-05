@@ -2,6 +2,8 @@ from functools import cached_property, lru_cache
 from dataclasses import dataclass
 from typing import List
 from itertools import chain
+from math import inf
+from copy import deepcopy
 
 import numpy as np
 from scipy.special import logsumexp
@@ -112,11 +114,23 @@ class Conformation:
 
     @property
     def width(self):
-        return abs(self.bond_dirs.count('R') - self.bond_dirs.count('L'))
+        return 1 + abs(self.bond_dirs.count('R') - self.bond_dirs.count('L'))
 
     @property
     def height(self):
-        return abs(self.bond_dirs.count('U') - self.bond_dirs.count('D'))
+        return 1 + abs(self.bond_dirs.count('U') - self.bond_dirs.count('D'))
+
+    def overlaps_with(self, other):
+        return not set(self.locations).isdisjoint(other.locations)
+
+    def contacts_with(self, other):
+        contacts = []
+        for i, location in enumerate(self.locations):
+            for bond_dir in ['U', 'R', 'D', 'L']:
+                adjacent_location = next_monomer_location(location, bond_dir)
+                if adjacent_location in other.locations:
+                    contacts.append((i, other.locations.index(adjacent_location)))
+        return contacts
 
 
 def generate_full_conformation_space(L):
@@ -217,11 +231,12 @@ class Lattice:
     def ensemble(self):
         return Ensemble(generate_full_conformation_space(self.L))
 
-    def sum_contact_energy(self, seq, contact_set):
+    def sum_contact_energy(self, seq, contact_set, seq2=None):
+        seq2 = seq if seq2 is None else seq2
         energy = 0
         for i, j in contact_set:
             aa1 = seq[i]
-            aa2 = seq[j]
+            aa2 = seq2[j]
             energy += self.interaction_energies[aa1 + aa2]
         return energy  # TODO: precision handling
 
@@ -274,6 +289,10 @@ class Protein:
 
         return self.conformations[0] if len(self.conformations) == 1 else None
 
+    @native_state.setter
+    def native_state(self, conformation):
+        self.conformations = [conformation]
+
     def partition_factor(self, temp=1.0):
         normalized_energies = np.append(-self.lattice.contact_set_energies(self.seq)/temp, -self.energy/temp)
         multiplicities = self.lattice.ensemble.contact_set_multiplicities + [-len(self.conformations)]
@@ -289,3 +308,34 @@ class Protein:
     def frac_folded(self, temp=1.0):
         assert isinstance(temp, (int, float)) and temp > 0
         return 1.0 / (1.0 + np.exp(self.stability(temp) / temp))
+
+    def bind(self, other):
+        assert self.lattice.interaction_energies == other.lattice.interaction_energies
+        ligand = deepcopy(other)
+        min_binding_energy = inf
+        min_binding_energy_rotations = []
+        min_binding_energy_location_deltas = []
+
+        for rotation in range(4):
+            if rotation > 0:
+                ligand.conformations = [ligand.native_state.rotated_clockwise()]
+            ligand_width = ligand.native_state.width
+            ligand_height = ligand.native_state.height
+            delta_x_range = range(-ligand_width, self.native_state.width + ligand_width)
+            delta_y_range = range(-ligand_height, self.native_state.height + ligand_height)  # TODO: check this
+            for delta_x in delta_x_range:
+                for delta_y in delta_y_range:
+                    ligand.native_state.location_delta = (delta_x, delta_y)
+                    if self.native_state.overlaps_with(ligand.native_state):
+                        continue
+                    contact_set = self.native_state.contacts_with(ligand.native_state)
+                    binding_energy = self.lattice.sum_contact_energy(self.seq, contact_set, ligand.seq)
+                    if binding_energy < min_binding_energy:
+                        min_binding_energy = binding_energy
+                        min_binding_energy_rotations = [rotation]
+                        min_binding_energy_location_deltas = [(delta_x, delta_y)]
+                    elif binding_energy == min_binding_energy:
+                        min_binding_energy_rotations.append(rotation)
+                        min_binding_energy_location_deltas.append((delta_x, delta_y))
+
+        return min_binding_energy, list(zip(min_binding_energy_rotations, min_binding_energy_location_deltas))
