@@ -116,11 +116,11 @@ class Conformation:
 
     @property
     def width(self):
-        return 1 + abs(self.bond_dirs.count('R') - self.bond_dirs.count('L'))
+        return 1 + max(self.locations, key=lambda x: x[0])[0] - min(self.locations, key=lambda x: x[0])[0]
 
     @property
     def height(self):
-        return 1 + abs(self.bond_dirs.count('U') - self.bond_dirs.count('D'))
+        return 1 + max(self.locations, key=lambda x: x[1])[1] - min(self.locations, key=lambda x: x[1])[1]
 
     def overlaps_with(self, other):
         return not set(self.locations).isdisjoint(other.locations)
@@ -312,7 +312,10 @@ class Protein:
         return 1.0 / (1.0 + np.exp(self.stability(temp) / temp))
 
     def bind(self, other):
+        if self.conformations is None:
+            raise ProteinNotFoldedError
         assert self.lattice.interaction_energies == other.lattice.interaction_energies
+
         ligand = deepcopy(other)
         min_binding_energy = inf
         min_binding_energy_rotations = []
