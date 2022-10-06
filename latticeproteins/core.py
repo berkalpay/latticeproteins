@@ -30,11 +30,6 @@ class Conformation:
     def bond_dirs(self):
         return self._bond_dirs
 
-    @bond_dirs.setter
-    def bond_dirs(self, value):
-        self._bond_dirs = value
-        self.__dict__.pop("contacts", None)
-
     @property
     def location_delta(self):
         return self._location_delta
@@ -45,10 +40,6 @@ class Conformation:
 
     def __getitem__(self, item):
         return self.bond_dirs[item]
-
-    def __setitem__(self, key, value):
-        self.bond_dirs = self.bond_dirs[:key] + value + self.bond_dirs[key+1:]
-        self.__dict__.pop("contacts", None)
 
     def __iter__(self):
         yield from self.bond_dirs
@@ -197,7 +188,7 @@ class Ensemble:
     def add(self, conformation):
         contacts = frozenset(conformation.contacts)
         try:
-            self.contact_sets_to_conformations[contacts].append(conformation)  # TODO: what if conformation changes?
+            self.contact_sets_to_conformations[contacts].append(conformation)
         except KeyError:
             self.contact_sets_to_conformations[contacts] = [conformation]
             self.contact_sets.append(contacts)
