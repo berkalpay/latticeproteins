@@ -1,18 +1,41 @@
+from unittest import TestCase
+
 from latticeproteins import Conformation, Lattice
 
 
-def test_locations():
-    true_locs = {(0, 0), (0, 1), (0, 2), (0, 3), (1, 3), (1, 4),
-                 (2, 4), (2, 3), (2, 2), (2, 1), (1, 1), (0, 1)}
-    assert set(Conformation("UUURURDDDLL").locations) == true_locs
+class ConformationTestCase(TestCase):
+    def setUp(self):
+        self.conformation = Conformation("UUURURDDDL")
+        self.true_locs = {(0, 0), (0, 1), (0, 2), (0, 3), (1, 3), (1, 4),
+                          (2, 4), (2, 3), (2, 2), (2, 1), (1, 1)}
 
-def test_locations_with_delta():
-    true_locs = {(0, 0), (0, 1), (0, 2), (0, 3), (1, 3), (1, 4),
-                 (2, 4), (2, 3), (2, 2), (2, 1), (1, 1), (0, 1)}
-    true_delta_locs = set([(x-2, y+1) for x, y in true_locs])
-    conformation = Conformation("UUURURDDDLL")
-    conformation.location_delta = (-2, 1)
-    assert set(conformation.locations) == true_delta_locs
+    def test_width(self):
+        self.assertEqual(self.conformation.width, 3)
+
+    def test_height(self):
+        self.assertEqual(self.conformation.height, 5)
+
+    def test_not_overlapping(self):
+        self.assertFalse(self.conformation.overlapping)
+
+    def test_locations(self):
+        self.assertEqual(set(self.conformation.locations), self.true_locs)
+
+    def test_shifted_locations(self):
+        shifted_conformation = Conformation(self.conformation.bond_dirs)
+        shifted_conformation.location_delta = (-2, 1)
+        true_delta_locs = set([(x - 2, y + 1) for x, y in self.true_locs])
+        self.assertEqual(set(shifted_conformation.locations), true_delta_locs)
+
+    def test_rotating_zero_times(self):
+        self.assertEqual(self.conformation.rotated_clockwise(0).bond_dirs, self.conformation.bond_dirs)
+
+    def test_rotating(self):
+        self.assertEqual(self.conformation.rotated_clockwise(3).bond_dirs, "LLLULURRRD")
+
+
+def test_rotating():
+    assert Conformation("UUU").rotated_clockwise(3).bond_dirs == "LLL"
 
 
 def test_overlapping():
