@@ -14,16 +14,31 @@ def test_binding_energy():
     assert round(total_contact_energy, 2) == -7.63
 
 
-class TestBinding(TestCase):
+class TestBindingSmall(TestCase):
     def setUp(self):
         protein = Protein("KIR", conformations=[Conformation("UU")], lattice=Lattice(L=3))
         ligand = Protein("NI", conformations=[Conformation("U")], lattice=Lattice(L=2))
         self.binding_energy, self.positioning_info = protein.bind(ligand)
 
     def test_min_binding_energy(self):
-        assert round(self.binding_energy, 2) == -7.63
+        self.assertEqual(round(self.binding_energy, 2), -7.63)
 
     def test_min_binding_positioning(self):
         for rotations, location_delta in self.positioning_info:
-            assert rotations == 2
-            assert location_delta in [(-1, 2), (1, 2)]
+            self.assertEqual(rotations, 2)
+            self.assertIn(location_delta, [(-1, 2), (1, 2)])
+
+
+class TestBindingLarge(TestCase):
+    def setUp(self):
+        protein = Protein("CDEFFKKHCIERMFMCYW", conformations=[Conformation("URDRURDDDDLUULLDR")], lattice=Lattice(L=18))
+        ligand = Protein("HDGEKGKA", conformations=[Conformation("URUUULL")], lattice=Lattice(L=2))
+        self.binding_energy, self.positioning_info = protein.bind(ligand)
+
+    def test_min_binding_energy(self):
+        self.assertEqual(round(self.binding_energy, 2), -17.90)
+
+    def test_min_binding_positioning(self):
+        for rotations, location_delta in self.positioning_info:
+            self.assertEqual(rotations, 1)
+            self.assertEqual(location_delta, (0, -3))
