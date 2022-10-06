@@ -132,45 +132,45 @@ def generate_full_conformation_space(L):
     conformations = []
     n = L - 2  # index of last bond in 'conformation'
     first_R = n  # index of the first 'R' in the conformation
-    conformation = ['U'] * (n + 1)
+    bond_dirs = ['U'] * (n + 1)
     while first_R > 0:
         # See if the current conformation has overlap
         x = y = j = 0
         res_positions = {(x, y): j}  # keyed by coords, items are residue numbers
         res_coords = [(x, y)]  # 'res_coords[j]' is coords of residue 'j'
-        for c in conformation:
-            x, y = next_monomer_location((x, y), c)
+        for bond_dir in bond_dirs:
+            x, y = next_monomer_location((x, y), bond_dir)
             if (x, y) in res_positions:  # overlap
                 # increment at the step that gave the problem
                 for k in range(j + 1, n + 1):
-                    conformation[k] = 'U'
-                conformation[j] = bond_dir_rotated_clockwise(conformation[j])
-                while conformation[j] == 'U':
+                    bond_dirs[k] = 'U'
+                bond_dirs[j] = bond_dir_rotated_clockwise(bond_dirs[j])
+                while bond_dirs[j] == 'U':
                     j -= 1
-                    conformation[j] = bond_dir_rotated_clockwise(conformation[j])
-                if j == first_R and conformation[j] not in ['R', 'U']:
+                    bond_dirs[j] = bond_dir_rotated_clockwise(bond_dirs[j])
+                if j == first_R and bond_dirs[j] not in ['R', 'U']:
                     first_R -= 1
-                    conformation[first_R] = 'R'
+                    bond_dirs[first_R] = 'R'
                     for k in range(j, n + 1):
-                        conformation[k] = 'U'
+                        bond_dirs[k] = 'U'
                 break
             j += 1
             res_positions[(x, y)] = j
             res_coords.append((x, y))
         else:  # loop finishes normally, this is a valid conformation
             # generate the next conformation
-            conformations.append(Conformation("".join(conformation)))
+            conformations.append(Conformation("".join(bond_dirs)))
             i = n
-            conformation[i] = bond_dir_rotated_clockwise(conformation[i])
-            while conformation[i] == 'U':
+            bond_dirs[i] = bond_dir_rotated_clockwise(bond_dirs[i])
+            while bond_dirs[i] == 'U':
                 i -= 1
-                conformation[i] = bond_dir_rotated_clockwise(conformation[i])
+                bond_dirs[i] = bond_dir_rotated_clockwise(bond_dirs[i])
             # make sure first non-'U' is 'R'
-            if i == first_R and conformation[i] not in ['R', 'U']:
+            if i == first_R and bond_dirs[i] not in ['R', 'U']:
                 first_R -= 1
-                conformation[first_R] = 'R'
+                bond_dirs[first_R] = 'R'
                 for j in range(i, n + 1):
-                    conformation[j] = 'U'
+                    bond_dirs[j] = 'U'
 
     return conformations
 
