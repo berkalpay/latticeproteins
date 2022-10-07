@@ -10,8 +10,7 @@ def test_num_conformations():
 
 class TestFolding(TestCase):
     def setUp(self):
-        #self.lattice = Lattice(L=18)
-        self.lattice = pickle.load(open("lattice18.pickle", "rb"))  # TODO: standardize path
+        self.lattice = Lattice(L=18)
         self.protein = Protein("CDEFFKKHCIERMFMCYW")
         self.lattice.fold(self.protein)
 

@@ -1,3 +1,5 @@
+import os
+import pickle
 from functools import cached_property, lru_cache
 from dataclasses import dataclass
 from typing import List
@@ -8,6 +10,7 @@ from copy import deepcopy
 import numpy as np
 from scipy.special import logsumexp
 
+import latticeproteins
 from latticeproteins.interactions import miyazawa_jernigan
 
 
@@ -209,6 +212,20 @@ class Ensemble:
         return chain(*self.contact_sets_to_conformations.values())
 
 
+class LengthEnsemble(Ensemble):
+    CACHE_DIR = os.path.join(os.path.dirname(latticeproteins.__file__), "cache")
+
+    def __init__(self, L, load=True, cache_dir=CACHE_DIR):
+        self.L = L
+        cache_path = f"{cache_dir}/{L}.pickle"
+        if load and os.path.exists(cache_path):
+            self.__dict__ = pickle.load(open(cache_path, "rb"))
+        else:
+            super().__init__(generate_full_conformation_space(L))
+            os.makedirs(cache_dir, exist_ok=True)
+            pickle.dump(self.__dict__, open(cache_path, "wb"))
+
+
 class Lattice:
     def __init__(self, L, interaction_energies=miyazawa_jernigan):
         self.L = L
@@ -222,7 +239,7 @@ class Lattice:
 
     @cached_property
     def ensemble(self):
-        return Ensemble(generate_full_conformation_space(self.L))
+        return LengthEnsemble(self.L)
 
     def sum_contact_energy(self, seq, contact_set, seq2=None):
         seq2 = seq if seq2 is None else seq2
