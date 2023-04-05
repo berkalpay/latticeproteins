@@ -13,15 +13,17 @@ from scipy.special import logsumexp
 import latticeproteins
 from latticeproteins.interactions import miyazawa_jernigan
 
-
+bond_dir_to_dx = {"U": 0, "R": 1, "D": 0, "L": -1}
+bond_dir_to_dy = {"U": 1, "R": 0, "D": -1, "L": 0}
 def next_monomer_location(location, bond_dir):
-    bond_dir_to_dx = {'U': 0, 'R': 1, 'D': 0, 'L': -1}
-    bond_dir_to_dy = {'U': 1, 'R': 0, 'D': -1, 'L': 0}
-    return location[0] + bond_dir_to_dx[bond_dir], location[1] + bond_dir_to_dy[bond_dir]
+    return (
+        location[0] + bond_dir_to_dx[bond_dir],
+        location[1] + bond_dir_to_dy[bond_dir],
+    )
 
 
 def bond_dir_rotated_clockwise(bond_dir):
-    return {'U': 'R', 'R': 'D', 'D': 'L', 'L': 'U'}[bond_dir]
+    return {"U": "R", "R": "D", "D": "L", "L": "U"}[bond_dir]
 
 
 class Conformation:
@@ -40,6 +42,7 @@ class Conformation:
     @location_delta.setter
     def location_delta(self, value):
         self._location_delta = value
+        self.__dict__.pop("locations", None)
 
     def __getitem__(self, item):
         return self.bond_dirs[item]
@@ -54,27 +57,31 @@ class Conformation:
         return hash(self.bond_dirs)
 
     def __repr__(self):
-        return "Conformation(\"{}\")".format("".join(self.bond_dirs))
+        return 'Conformation("{}")'.format("".join(self.bond_dirs))
 
     def __str__(self):
         return "".join(self.bond_dirs)
 
-    @property
-    def locations(self):
-        locations = [(self.location_delta[0], self.location_delta[1])]
+    @cached_property
+    def positions(self):
+        locations = [(0,0)]
         for bond_dir in self.bond_dirs:
             locations.append(next_monomer_location(locations[-1], bond_dir))
         return locations
 
+    @cached_property
+    def locations(self):
+        return [(x + self.location_delta[0], y + self.location_delta[1]) for x, y in self.positions]
+
     @property
     def overlapping(self):
-        return len(self.bond_dirs) != len(set(self.locations)) - 1
+        return len(self.bond_dirs) != len(set(self.positions)) - 1
 
     def _forward_contacts(self):
-        locations = self.locations
+        locations = self.positions
         index_to_contacts = {i: [] for i in range(len(locations))}
         for i, location in enumerate(locations):
-            for bond_dir in ['U', 'R', 'D', 'L']:
+            for bond_dir in ["U", "R", "D", "L"]:
                 adjacent_location = next_monomer_location(location, bond_dir)
                 if adjacent_location in locations:
                     j = locations.index(adjacent_location)
@@ -93,41 +100,50 @@ class Conformation:
     def rotated_clockwise(self, n=1):
         rotated_bond_dirs = self.bond_dirs
         for _ in range(n):
-            rotated_bond_dirs = [bond_dir_rotated_clockwise(bond_dir) for bond_dir in rotated_bond_dirs]
+            rotated_bond_dirs = [
+                bond_dir_rotated_clockwise(bond_dir) for bond_dir in rotated_bond_dirs
+            ]
         return Conformation("".join(rotated_bond_dirs))
 
     @property
     def in_standard_form(self):
         i = 0
         bond_dir = self.bond_dirs[0]
-        if bond_dir == 'U':
+        if bond_dir == "U":
             return False
-        while bond_dir == 'U':
+        while bond_dir == "U":
             i += 1
-            if not self.bond_dirs[i] in ['U', 'R']:
+            if not self.bond_dirs[i] in ["U", "R"]:
                 return False
         return True
 
     @property
     def width(self):
-        return 1 + max(self.locations, key=lambda x: x[0])[0] - min(self.locations, key=lambda x: x[0])[0]
+        return (
+            1
+            + max(self.positions, key=lambda x: x[0])[0]
+            - min(self.positions, key=lambda x: x[0])[0]
+        )
 
     @property
     def height(self):
-        return 1 + max(self.locations, key=lambda x: x[1])[1] - min(self.locations, key=lambda x: x[1])[1]
+        return (
+            1
+            + max(self.positions, key=lambda x: x[1])[1]
+            - min(self.positions, key=lambda x: x[1])[1]
+        )
 
     def overlaps_with(self, other):
         return not set(self.locations).isdisjoint(other.locations)
 
-    def contacts_with(self, other):
+    def contacts_with(self, other):  # TODO: optimize this
         contacts = []
         for i, location in enumerate(self.locations):
-            for bond_dir in ['U', 'R', 'D', 'L']:
+            for bond_dir in ["U", "R", "D", "L"]:
                 adjacent_location = next_monomer_location(location, bond_dir)
                 if adjacent_location in other.locations:
                     contacts.append((i, other.locations.index(adjacent_location)))
         return contacts
-
 
 def generate_full_conformation_space(L):
     """Return all self-avoiding walks of length 'L' with the first bond Up and the first non-Up bond Right."""
@@ -135,7 +151,7 @@ def generate_full_conformation_space(L):
     conformations = []
     n = L - 2  # index of last bond in 'conformation'
     first_R = n  # index of the first 'R' in the conformation
-    bond_dirs = ['U'] * (n + 1)
+    bond_dirs = ["U"] * (n + 1)
     while first_R > 0:
         # See if the current conformation has overlap
         x = y = j = 0
@@ -146,16 +162,16 @@ def generate_full_conformation_space(L):
             if (x, y) in res_positions:  # overlap
                 # increment at the step that gave the problem
                 for k in range(j + 1, n + 1):
-                    bond_dirs[k] = 'U'
+                    bond_dirs[k] = "U"
                 bond_dirs[j] = bond_dir_rotated_clockwise(bond_dirs[j])
-                while bond_dirs[j] == 'U':
+                while bond_dirs[j] == "U":
                     j -= 1
                     bond_dirs[j] = bond_dir_rotated_clockwise(bond_dirs[j])
-                if j == first_R and bond_dirs[j] not in ['R', 'U']:
+                if j == first_R and bond_dirs[j] not in ["R", "U"]:
                     first_R -= 1
-                    bond_dirs[first_R] = 'R'
+                    bond_dirs[first_R] = "R"
                     for k in range(j, n + 1):
-                        bond_dirs[k] = 'U'
+                        bond_dirs[k] = "U"
                 break
             j += 1
             res_positions[(x, y)] = j
@@ -165,15 +181,15 @@ def generate_full_conformation_space(L):
             conformations.append(Conformation("".join(bond_dirs)))
             i = n
             bond_dirs[i] = bond_dir_rotated_clockwise(bond_dirs[i])
-            while bond_dirs[i] == 'U':
+            while bond_dirs[i] == "U":
                 i -= 1
                 bond_dirs[i] = bond_dir_rotated_clockwise(bond_dirs[i])
             # make sure first non-'U' is 'R'
-            if i == first_R and bond_dirs[i] not in ['R', 'U']:
+            if i == first_R and bond_dirs[i] not in ["R", "U"]:
                 first_R -= 1
-                bond_dirs[first_R] = 'R'
+                bond_dirs[first_R] = "R"
                 for j in range(i, n + 1):
-                    bond_dirs[j] = 'U'
+                    bond_dirs[j] = "U"
 
     return conformations
 
@@ -201,7 +217,9 @@ class Ensemble:
 
     @cached_property
     def contact_set_multiplicities(self):
-        return [len(self.conformations_with_contact_set(cs)) for cs in self.contact_sets]
+        return [
+            len(self.conformations_with_contact_set(cs)) for cs in self.contact_sets
+        ]
 
     @cached_property
     def num_conformations(self):
@@ -232,7 +250,10 @@ class Lattice:
         self.interaction_energies = interaction_energies
 
     def __eq__(self, other):
-        return self.L == other.L and self.interaction_energies == other.interaction_energies
+        return (
+            self.L == other.L
+            and self.interaction_energies == other.interaction_energies
+        )
 
     def __hash__(self):
         return hash(tuple([self.L, frozenset(self.interaction_energies.items())]))
@@ -262,7 +283,9 @@ class Lattice:
         return contact_set_energies
 
     def conformation_energies(self, seq):
-        return np.repeat(self.contact_set_energies(seq), self.ensemble.contact_set_multiplicities)
+        return np.repeat(
+            self.contact_set_energies(seq), self.ensemble.contact_set_multiplicities
+        )
 
     @lru_cache(maxsize=16)
     def minE_conformations(self, seq):
@@ -271,7 +294,9 @@ class Lattice:
         minE_contact_sets = [self.ensemble.contact_sets[i] for i in minE_indices]
         minE_conformations = []
         for contact_set in minE_contact_sets:
-            for conformation in self.ensemble.conformations_with_contact_set(contact_set):
+            for conformation in self.ensemble.conformations_with_contact_set(
+                contact_set
+            ):
                 minE_conformations.append(conformation)
         return minE_conformations
 
@@ -304,8 +329,12 @@ class Protein:
         self.conformations = [conformation]
 
     def partition_factor(self, temp=1.0):
-        normalized_energies = np.append(-self.lattice.contact_set_energies(self.seq)/temp, -self.energy/temp)
-        multiplicities = self.lattice.ensemble.contact_set_multiplicities + [-len(self.conformations)]
+        normalized_energies = np.append(
+            -self.lattice.contact_set_energies(self.seq) / temp, -self.energy / temp
+        )
+        multiplicities = self.lattice.ensemble.contact_set_multiplicities + [
+            -len(self.conformations)
+        ]
         return logsumexp(normalized_energies, b=multiplicities)
 
     def stability(self, temp=1.0):
@@ -324,25 +353,31 @@ class Protein:
             raise ProteinNotFoldedError
         assert self.lattice.interaction_energies == other.lattice.interaction_energies
 
-        ligand = deepcopy(other)
+        ligand = deepcopy(other)  # TODO: any way around this?
         min_binding_energy = inf
         min_binding_energy_rotations = []
         min_binding_energy_location_deltas = []
 
         unrotated_ligand_native_state = ligand.native_state
         for rotations in range(4):
-            ligand.native_state = unrotated_ligand_native_state.rotated_clockwise(rotations)
+            ligand.native_state = unrotated_ligand_native_state.rotated_clockwise(
+                rotations
+            )
             ligand_width = ligand.native_state.width
             ligand_height = ligand.native_state.height
             delta_x_range = range(-ligand_width, self.native_state.width + ligand_width)
-            delta_y_range = range(-ligand_height, self.native_state.height + ligand_height)  # TODO: check this
+            delta_y_range = range(
+                -ligand_height, self.native_state.height + ligand_height
+            )  # TODO: check this
             for delta_x in delta_x_range:
                 for delta_y in delta_y_range:
                     ligand.native_state.location_delta = (delta_x, delta_y)
                     if self.native_state.overlaps_with(ligand.native_state):
                         continue
                     contact_set = self.native_state.contacts_with(ligand.native_state)
-                    binding_energy = self.lattice.sum_contact_energy(self.seq, contact_set, ligand.seq)
+                    binding_energy = self.lattice.sum_contact_energy(
+                        self.seq, contact_set, ligand.seq
+                    )
                     if binding_energy < min_binding_energy:
                         min_binding_energy = binding_energy
                         min_binding_energy_rotations = [rotations]
@@ -351,4 +386,6 @@ class Protein:
                         min_binding_energy_rotations.append(rotations)
                         min_binding_energy_location_deltas.append((delta_x, delta_y))
 
-        return min_binding_energy, list(zip(min_binding_energy_rotations, min_binding_energy_location_deltas))
+        return min_binding_energy, list(
+            zip(min_binding_energy_rotations, min_binding_energy_location_deltas)
+        )
