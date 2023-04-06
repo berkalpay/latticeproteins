@@ -21,6 +21,12 @@ def next_monomer_location(location, bond_dir):
         location[1] + bond_dir_to_dy[bond_dir],
     )
 
+def adjacent_locations(location):
+    return [(location[0] + 1, location[1]),
+            (location[0] - 1, location[1]),
+            (location[0], location[1] + 1),
+            (location[0], location[1] - 1)]
+
 
 def bond_dir_rotated_clockwise(bond_dir):
     return {"U": "R", "R": "D", "D": "L", "L": "U"}[bond_dir]
@@ -81,8 +87,7 @@ class Conformation:
         locations = self.positions
         index_to_contacts = {i: [] for i in range(len(locations))}
         for i, location in enumerate(locations):
-            for bond_dir in ["U", "R", "D", "L"]:
-                adjacent_location = next_monomer_location(location, bond_dir)
+            for adjacent_location in adjacent_locations(location):
                 if adjacent_location in locations:
                     j = locations.index(adjacent_location)
                     if j > i + 1:
@@ -140,11 +145,7 @@ class Conformation:
         other_locations = set(other.locations)
         contacts = []
         for i, location in enumerate(self.locations):
-            adjacent_locations = [(location[0]+1, location[1]),
-                                  (location[0]-1, location[1]),
-                                  (location[0], location[1]+1),
-                                  (location[0], location[1]-1)]
-            for adjacent_location in adjacent_locations:
+            for adjacent_location in adjacent_locations(location):
                 if adjacent_location in other_locations:
                     contacts.append((i, other.locations.index(adjacent_location)))
         return contacts
@@ -326,7 +327,7 @@ class Protein:
         if self.conformations is None:
             raise ProteinNotFoldedError
 
-        return self.conformations[0] if len(self.conformations) == 1 else None
+        return self.conformations[0] if len(self.conformations) == 1 else None  # TODO: optimize this?
 
     @native_state.setter
     def native_state(self, conformation):
