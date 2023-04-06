@@ -353,11 +353,13 @@ class Protein:
         return 1.0 / (1.0 + np.exp(self.stability(temp) / temp))
 
     def bind(self, other):
+        """Warning: other will be mutated."""  # TODO: prevent this
+
         if self.conformations is None:
             raise ProteinNotFoldedError
         assert self.lattice.interaction_energies == other.lattice.interaction_energies
 
-        ligand = deepcopy(other)  # TODO: any way around this?
+        ligand = other
         min_binding_energy = inf
         min_binding_energy_rotations = []
         min_binding_energy_location_deltas = []
