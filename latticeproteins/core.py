@@ -136,12 +136,16 @@ class Conformation:
     def overlaps_with(self, other):
         return not set(self.locations).isdisjoint(other.locations)
 
-    def contacts_with(self, other):  # TODO: optimize this
+    def contacts_with(self, other):
+        other_locations = set(other.locations)
         contacts = []
         for i, location in enumerate(self.locations):
-            for bond_dir in ["U", "R", "D", "L"]:
-                adjacent_location = next_monomer_location(location, bond_dir)
-                if adjacent_location in other.locations:
+            adjacent_locations = [(location[0]+1, location[1]),
+                                  (location[0]-1, location[1]),
+                                  (location[0], location[1]+1),
+                                  (location[0], location[1]-1)]
+            for adjacent_location in adjacent_locations:
+                if adjacent_location in other_locations:
                     contacts.append((i, other.locations.index(adjacent_location)))
         return contacts
 
